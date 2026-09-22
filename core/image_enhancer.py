@@ -19,11 +19,28 @@ import cv2
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
-ORIGINAL_UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "uploads", "original")
-ENHANCED_UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "uploads", "enhanced")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-os.makedirs(ORIGINAL_UPLOAD_DIR, exist_ok=True)
-os.makedirs(ENHANCED_UPLOAD_DIR, exist_ok=True)
+def get_upload_directories():
+    """
+    Returns writable upload directories for original evidence and enhanced analysis copies.
+    On Vercel/serverless environments, redirects to /tmp/uploads to avoid read-only filesystem errors.
+    """
+    is_serverless = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or not os.access(BASE_DIR, os.W_OK))
+    if is_serverless:
+        orig_dir = "/tmp/uploads/original"
+        enh_dir = "/tmp/uploads/enhanced"
+    else:
+        orig_dir = os.path.join(BASE_DIR, "static", "uploads", "original")
+        enh_dir = os.path.join(BASE_DIR, "static", "uploads", "enhanced")
+    try:
+        os.makedirs(orig_dir, exist_ok=True)
+        os.makedirs(enh_dir, exist_ok=True)
+    except Exception as e:
+        print(f"[eSavadh Storage] Notice initializing upload dirs: {e}")
+    return orig_dir, enh_dir
+
+ORIGINAL_UPLOAD_DIR, ENHANCED_UPLOAD_DIR = get_upload_directories()
 
 
 def analyze_image_quality(image_path):
@@ -82,8 +99,9 @@ def enhance_evidence_image(original_file_path, base_filename=None):
     if not base_filename:
         base_filename = os.path.basename(original_file_path)
         
+    orig_dir, enh_dir = get_upload_directories()
     enhanced_filename = f"enhanced_{int(time.time())}_{base_filename}"
-    enhanced_abs_path = os.path.join(ENHANCED_UPLOAD_DIR, enhanced_filename)
+    enhanced_abs_path = os.path.join(enh_dir, enhanced_filename)
     
     try:
         img = Image.open(original_file_path)

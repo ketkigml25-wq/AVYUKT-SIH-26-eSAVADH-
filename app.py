@@ -12,23 +12,64 @@ import json
 import sqlite3
 from datetime import datetime
 from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_from_directory
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
 
 import database
 from core.ocr_engine import perform_ocr_extraction, parse_declarations_from_text
-from core.image_enhancer import enhance_evidence_image, analyze_image_quality
+from core.image_enhancer import enhance_evidence_image, analyze_image_quality, get_upload_directories
 from core.rule_engine import evaluate_product_compliance
 from core.legal_notices import generate_draft_notice, calculate_compounding_fee
 from core.ecommerce_engine import parse_ecommerce_listing_details, get_tier2_roadmap_spec
 
-app = Flask(__name__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, "templates"),
+    static_folder=os.path.join(BASE_DIR, "static")
+)
 app.secret_key = os.environ.get("SECRET_KEY", "esavadh-statutory-metrology-avyukt-2026")
 
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "uploads", "original")
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+IS_SERVERLESS = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or not os.access(BASE_DIR, os.W_OK))
+
+if IS_SERVERLESS:
+    UPLOAD_FOLDER = "/tmp/uploads/original"
+else:
+    UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads", "original")
+
+try:
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+except Exception as e:
+    print(f"[eSavadh Storage] Notice: {e}")
+
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+
+@app.before_request
+def ensure_serverless_db_ready():
+    """Ensures database tables are bootstrapped if starting cold on a serverless container."""
+    if not getattr(app, "_db_bootstrapped", False):
+        try:
+            database.init_db()
+            app._db_bootstrapped = True
+        except Exception as e:
+            print(f"[eSavadh DB] Serverless init notice: {e}")
+
+
+@app.route("/static/uploads/<path:filename>")
+@app.route("/uploads/<path:filename>")
+def serve_uploaded_evidence(filename):
+    """Serves uploaded original and enhanced evidence images across local and serverless /tmp directories."""
+    # 1. Local static uploads directory
+    local_path = os.path.join(BASE_DIR, "static", "uploads", filename)
+    if os.path.exists(local_path):
+        return send_from_directory(os.path.dirname(local_path), os.path.basename(local_path))
+    # 2. Serverless /tmp uploads directory
+    tmp_path = os.path.join("/tmp", "uploads", filename)
+    if os.path.exists(tmp_path):
+        return send_from_directory(os.path.dirname(tmp_path), os.path.basename(tmp_path))
+    return ("Evidence image not found", 404)
 
 
 # ============================================================================

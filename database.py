@@ -12,15 +12,41 @@ import json
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "esavadh.db")
-SCHEMA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.sql")
+import shutil
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SCHEMA_PATH = os.path.join(BASE_DIR, "schema.sql")
+
+def get_effective_db_path():
+    """
+    Determines effective SQLite database path.
+    On Vercel/Serverless Linux with read-only root directories, redirects to /tmp/esavadh.db
+    and bootstraps initial database copy if needed.
+    """
+    local_db = os.path.join(BASE_DIR, "esavadh.db")
+    is_serverless = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or not os.access(BASE_DIR, os.W_OK))
+
+    if is_serverless:
+        tmp_db = "/tmp/esavadh.db"
+        if not os.path.exists(tmp_db):
+            if os.path.exists(local_db):
+                try:
+                    shutil.copy2(local_db, tmp_db)
+                except Exception as e:
+                    print(f"[eSavadh DB] Notice copying local db to /tmp: {e}")
+        return tmp_db
+    return local_db
 
 
 def get_db():
     """Returns an active SQLite connection with WAL mode, busy timeout, and dictionary row access."""
-    conn = sqlite3.connect(DB_PATH, timeout=60.0, check_same_thread=False)
+    db_path = get_effective_db_path()
+    conn = sqlite3.connect(db_path, timeout=60.0, check_same_thread=False)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode = WAL;")
+    try:
+        conn.execute("PRAGMA journal_mode = WAL;")
+    except Exception:
+        pass
     conn.execute("PRAGMA busy_timeout = 60000;")
     conn.execute("PRAGMA synchronous = NORMAL;")
     conn.execute("PRAGMA foreign_keys = ON;")
