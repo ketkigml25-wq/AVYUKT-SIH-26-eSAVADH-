@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Reports & Compliance Analytics - eSavadh{% endblock %}
+
+{% block content %}
+<!-- Section Masthead -->
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Compliance Intelligence & Reporting Center</h2>
+            <p class="ledger-subtitle">Monthly, yearly, and per-inspection statutory compliance reporting</p>
+        </div>
+        <div class="ledger-meta-stamp">
+            DIRECTORATE ANALYTICS
+        </div>
+    </div>
+
+    <div class="ledger-body">
+        <!-- Monthly Summary Dashboard -->
+        <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1.5rem; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                    <h3 style="font-family: var(--font-serif); font-size: 1.25rem; color: var(--color-plum);">
+                        Monthly Statutory Enforcement Summary (September 2026)
+                    </h3>
+                    <p style="font-size: 0.8rem; color: var(--color-charcoal-muted);">Aggregated market surveillance across Northern & Western Zones</p>
+                </div>
+                <div>
+                    <button class="btn btn-outline btn-sm" onclick="window.print()">&#128438; Print Monthly Summary</button>
+                </div>
+            </div>
+
+            <div class="metric-grid" style="margin-bottom: 1rem;">
+                <div class="metric-card brass-top">
+                    <div class="metric-label">TOTAL SURVEILLANCE AUDITS</div>
+                    <div class="metric-value">{{ total_inspections }}</div>
+                    <div class="form-hint">Physical & E-Commerce</div>
+                </div>
+                <div class="metric-card green-top">
+                    <div class="metric-label">CERTIFIED COMPLIANT</div>
+                    <div class="metric-value">{{ compliant_count }}</div>
+                    <div class="form-hint">Passed all PCR 2011 checks</div>
+                </div>
+                <div class="metric-card red-top">
+                    <div class="metric-label">VIOLATIONS FLAGGED</div>
+                    <div class="metric-value">{{ violation_count }}</div>
+                    <div class="form-hint">Notice issuance initiated</div>
+                </div>
+                <div class="metric-card cerulean-top">
+                    <div class="metric-label">E-COMMERCE LISTINGS</div>
+                    <div class="metric-value">3</div>
+                    <div class="form-hint">Tracked via Section 46 Node</div>
+                </div>
+            </div>
+
+            <!-- Top Common Violations Table -->
+            <div class="ledger-table-wrapper">
+                <table class="ledger-table">
+                    <thead>
+                        <tr>
+                            <th>Statutory Non-Compliance Category</th>
+                            <th>Relevant Rule</th>
+                            <th>Occurrences</th>
+                            <th>Severity Level</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Unit Sale Price (USP) Omission</td>
+                            <td>Rule 6(11), PCR Amendment 2021</td>
+                            <td>1</td>
+                            <td><span class="status-badge status-non-compliant">Major</span></td>
+                        </tr>
+                        <tr>
+                            <td>Consumer Care Helpline / Email Missing</td>
+                            <td>Rule 6(1)(f), PCR 2011</td>
+                            <td>1</td>
+                            <td><span class="status-badge status-non-compliant">Major</span></td>
+                        </tr>
+                        <tr>
+                            <td>Country of Origin Unclear on E-Commerce</td>
+                            <td>Rule 6(10), PCR 2011</td>
+                            <td>1</td>
+                            <td><span class="status-badge status-needs-review">Medium</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Per-Inspection Printable Reports Register -->
+        <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1.5rem;">
+            <h3 style="font-family: var(--font-serif); font-size: 1.25rem; color: var(--color-plum); margin-bottom: 0.5rem;">
+                Individual Inspection Dossier Certificates
+            </h3>
+            <p style="font-size: 0.8rem; color: var(--color-charcoal-muted); margin-bottom: 1rem;">
+                Select any completed surveillance dossier to generate and print its official Legal Metrology Compliance Dossier.
+            </p>
+
+            <div class="ledger-table-wrapper">
+                <table class="ledger-table">
+                    <thead>
+                        <tr>
+                            <th>Dossier Ref</th>
+                            <th>Commodity Name</th>
+                            <th>Investigating Officer</th>
+                            <th>Status</th>
+                            <th>Official Certificate Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for insp in inspections %}
+                        <tr>
+                            <td><strong>{{ insp.ref_no }}</strong></td>
+                            <td>{{ insp.product_name or 'Packaged Item' }}</td>
+                            <td>{{ insp.inspector_name or 'Officer' }}</td>
+                            <td>
+                                {% if insp.compliance_status == 'Compliant' %}
+                                <span class="status-badge status-compliant">&#10003; Compliant</span>
+                                {% else %}
+                                <span class="status-badge status-non-compliant">&#10007; Non-Compliant</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('printable_dossier', inspection_id=insp.id) }}" target="_blank" class="btn btn-primary btn-sm">
+                                    &#128438; Generate Printable Dossier &rarr;
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

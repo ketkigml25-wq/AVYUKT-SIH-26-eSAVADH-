@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}New Inspection - eSavadh{% endblock %}
+
+{% block content %}
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Commodity Compliance Inspection Form</h2>
+            <p class="ledger-subtitle">Initiate a verification audit under Legal Metrology (Packaged Commodities) Rules</p>
+        </div>
+        <div class="ledger-meta-stamp">
+            INSPECTION MODULE
+        </div>
+    </div>
+
+    <div class="ledger-body">
+        <div class="placeholder-notice">
+            <h3>&#9998; Inspection Engine Workflow Ready</h3>
+            <p style="max-width: 600px; margin: 0.5rem auto 1.5rem auto;">
+                This module will capture packaged commodity labels, perform OCR text extraction, and automatically evaluate mandatory declarations (MRP, Net Qty, Best Before, Consumer Care, Manufacturer Address).
+            </p>
+            <div style="display: inline-flex; gap: 1rem;">
+                <a href="{{ url_for('dashboard_router') }}" class="btn btn-outline">&larr; Return to Dashboard</a>
+                <a href="{{ url_for('inspection_history') }}" class="btn btn-primary">View Past Inspections</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

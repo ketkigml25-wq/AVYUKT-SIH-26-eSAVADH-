@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Director General Control Center - eSavadh{% endblock %}
+
+{% block content %}
+<!-- Admin Metrics Summary -->
+<div class="metric-grid">
+    <div class="metric-card brass-top">
+        <div class="metric-label">DIRECTORATE OVERSIGHT</div>
+        <div class="metric-value" style="font-size: 1.25rem;">{{ user.name }}</div>
+        <div class="form-hint">National Legal Metrology Enforcement</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">TOTAL INSPECTIONS</div>
+        <div class="metric-value">{{ total_inspections }}</div>
+        <div class="form-hint">Field + E-Commerce Surveillance</div>
+    </div>
+    <div class="metric-card green-top">
+        <div class="metric-label">COMPLIANCE BENCHMARK</div>
+        <div class="metric-value">{{ compliance_rate }}%</div>
+        <div class="form-hint">National Average Verified</div>
+    </div>
+    <div class="metric-card red-top">
+        <div class="metric-label">FLAGGED CONTRAVENTIONS</div>
+        <div class="metric-value">{{ violation_count }}</div>
+        <div class="form-hint">Actionable under Section 36</div>
+    </div>
+</div>
+
+<!-- Quick Action Shortcuts -->
+<div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+    <a href="{{ url_for('rules_center') }}" class="btn btn-outline btn-sm">&#128214; Publish / Edit Rule Versions</a>
+    <a href="{{ url_for('team_management') }}" class="btn btn-outline btn-sm">&#128101; Team Deployment & Workload</a>
+    <a href="{{ url_for('audit_integrity') }}" class="btn btn-outline btn-sm">&#128274; Anti-Corruption Audit Logs</a>
+    <a href="{{ url_for('ecommerce_monitor') }}" class="btn btn-outline btn-sm">&#128187; E-Commerce Surveillance</a>
+    <a href="{{ url_for('reports_center') }}" class="btn btn-accent btn-sm">&#128202; Export Monthly / Yearly Dossier</a>
+</div>
+
+<!-- Central Inspection Oversight Register -->
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Master Enforcement Registry & Dossiers</h2>
+            <p class="ledger-subtitle">Real-time surveillance feeds across enforcement zones</p>
+        </div>
+        <div class="ledger-meta-stamp">
+            DIRECTORATE CENTRAL REPOSITORY
+        </div>
+    </div>
+
+    <div class="ledger-body">
+        <div class="ledger-table-wrapper">
+            <table class="ledger-table">
+                <thead>
+                    <tr>
+                        <th>Dossier Ref</th>
+                        <th>Commodity</th>
+                        <th>Investigating Officer</th>
+                        <th>Date</th>
+                        <th>Source</th>
+                        <th>Compliance Finding</th>
+                        <th>Statutory Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for insp in inspections %}
+                    <tr>
+                        <td><strong>{{ insp.ref_no }}</strong></td>
+                        <td>
+                            <div style="font-weight: 600;">{{ insp.product_name or 'Unregistered Commodity' }}</div>
+                            <div class="form-hint">{{ insp.product_category or 'General' }}</div>
+                        </td>
+                        <td>{{ insp.inspector_name or 'Officer' }}</td>
+                        <td>{{ insp.created_at }}</td>
+                        <td>
+                            {% if insp.source == 'e-commerce' %}
+                            <span class="status-badge status-needs-review">&#128187; E-Commerce</span>
+                            {% else %}
+                            <span class="status-badge" style="background:#EBF3F8; color:#1F5C8B; border-color:#1F5C8B;">&#128247; Field Label</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if insp.compliance_status == 'Compliant' %}
+                            <span class="status-badge status-compliant">&#10003; Compliant</span>
+                            {% elif insp.compliance_status == 'Non-Compliant' %}
+                            <span class="status-badge status-non-compliant">&#10007; Non-Compliant</span>
+                            {% else %}
+                            <span class="status-badge status-needs-review">&#9888; Needs Review</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('inspection_detail', inspection_id=insp.id) }}" class="btn btn-primary btn-sm">
+                                Review Dossier
+                            </a>
+                            {% if insp.compliance_status == 'Non-Compliant' %}
+                            <a href="{{ url_for('draft_notice_view', inspection_id=insp.id) }}" class="btn btn-accent btn-sm" style="margin-left: 0.25rem;">
+                                Notice &rarr;
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--color-charcoal-muted); padding: 2rem;">
+                            No inspection dossiers recorded yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}

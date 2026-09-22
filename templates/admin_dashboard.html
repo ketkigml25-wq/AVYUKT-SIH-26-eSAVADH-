@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Control Center - eSavadh{% endblock %}
+
+{% block content %}
+<!-- Admin Metrics Summary -->
+<div class="metric-grid">
+    <div class="metric-card brass-top">
+        <div class="metric-label">SYSTEM ADMINISTRATOR</div>
+        <div class="metric-value" style="font-size: 1.25rem;">{{ user.name }}</div>
+        <div class="form-hint">Directorate of Legal Metrology</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">REGISTERED USERS</div>
+        <div class="metric-value">2</div>
+        <div class="form-hint">1 Inspector, 1 Admin</div>
+    </div>
+    <div class="metric-card green-top">
+        <div class="metric-label">REGISTERED COMMODITIES</div>
+        <div class="metric-value">0</div>
+        <div class="form-hint">Product catalog entries</div>
+    </div>
+    <div class="metric-card red-top">
+        <div class="metric-label">COMPLIANCE RATE</div>
+        <div class="metric-value">100%</div>
+        <div class="form-hint">National average benchmark</div>
+    </div>
+</div>
+
+<!-- Admin Control Register -->
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Central Administrative Oversight & User Registry</h2>
+            <p class="ledger-subtitle">System governance, inspection audits, and legal notice generation controls</p>
+        </div>
+        <div class="ledger-meta-stamp">
+            STATUS: ACTIVE &bull; ENFORCEMENT NODE 01
+        </div>
+    </div>
+
+    <div class="ledger-body">
+        <div class="ledger-table-wrapper" style="margin-bottom: 1.5rem;">
+            <table class="ledger-table">
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Officer / Official Name</th>
+                        <th>Official Email</th>
+                        <th>Assigned Role</th>
+                        <th>Account Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>#USR-001</td>
+                        <td>Officer Rajesh Sharma</td>
+                        <td>inspector@esavadh.gov.in</td>
+                        <td><span class="status-badge status-compliant">Inspector</span></td>
+                        <td>Verified Active</td>
+                    </tr>
+                    <tr>
+                        <td>#USR-002</td>
+                        <td>Director Anita Roy</td>
+                        <td>admin@esavadh.gov.in</td>
+                        <td><span class="status-badge status-pending">Admin</span></td>
+                        <td>Verified Active</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="placeholder-notice">
+            <h3>Administrative Monitoring Node</h3>
+            <p>Admin configuration for rule threshold definitions, bulk notice exports, and inspector telemetry will be plugged in here.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

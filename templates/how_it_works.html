@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}How It Works - eSavadh{% endblock %}
+
+{% block content %}
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">How eSavadh Works: 9-Step Verification Pipeline</h2>
+            <p class="ledger-subtitle">Statutory inspection, intelligence, and evidence governance workflow</p>
+        </div>
+        <div class="ledger-meta-stamp">
+            OPERATIONAL ARCHITECTURE
+        </div>
+    </div>
+
+    <div class="ledger-body">
+        <div style="max-width: 900px; margin: 0 auto;">
+            {% set steps = [
+                ("1. Capture", "Mobile Camera & Multi-side Guidance", "The inspector uses the mobile camera or file upload with guided viewfinder overlays to capture Principal Display Panels: Front, Back, Left, Right, Top, and Bottom. Coverage indicators prevent unnecessary repeat scans."),
+                ("2. Enhance", "Image Quality Analysis & Preservation", "Automated preprocessing detects blur, glare, and low contrast. Applies adaptive histogram equalisation and sharpening while preserving original raw evidence untouched."),
+                ("3. Extract", "Multilingual OCR Engine", "Extracts packaging text in English and Hindi (Devanagari script), calculating optical confidence scores for each detected word."),
+                ("4. Understand", "Declaration Field Classification", "Extracts mandatory Legal Metrology declarations: Maximum Retail Price (MRP), Net Quantity, Date of Manufacture/Packing, Manufacturer Address, Consumer Care helpline, and Country of Origin."),
+                ("5. Validate", "Time-Aware Rule Selection", "Evaluates declarations against rules that were legally effective on the product's manufacturing date, preventing retroactive misapplication of newer amendments (e.g. Unit Sale Price)."),
+                ("6. Verify", "Human-in-the-Loop Confirmation", "When OCR reads ambiguous or degraded text (e.g. '₹1?9'), the system suggests the probable value. The inspector explicitly CONFIRMS, DENIES, or EDITS every suggestion."),
+                ("7. Assess", "Compliance Status Determination", "Outputs definitive statutory determinations: COMPLIANT, NON-COMPLIANT, NEEDS REVIEW, NOT APPLICABLE, or INSUFFICIENT EVIDENCE."),
+                ("8. Report", "Evidence-Backed Dossier & Notices", "Generates an official inspection dossier with cropped evidence, time stamps, GPS metadata, and Section 18 / 49 Draft Legal Notices."),
+                ("9. Track", "Immutable Audit Trail & Sync", "Every observation, edit, and compounding record is stored in an immutable audit log. Offline field inspections synchronize automatically upon connection restore.")
+            ] %}
+
+            {% for num, title, desc in steps %}
+            <div style="display: flex; gap: 1.25rem; margin-bottom: 1.5rem; background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1.25rem; border-left: 5px solid var(--color-plum);">
+                <div style="flex-shrink: 0; width: 44px; height: 44px; background: var(--color-plum-dark); color: var(--color-brass); display: flex; align-items: center; justify-content: center; font-weight: 700; font-family: var(--font-serif); font-size: 1.1rem;">
+                    {{ loop.index }}
+                </div>
+                <div>
+                    <h3 style="font-family: var(--font-serif); font-size: 1.1rem; color: var(--color-plum); font-weight: 700; margin-bottom: 0.25rem;">
+                        {{ num }} &bull; {{ title }}
+                    </h3>
+                    <p style="font-size: 0.875rem; color: var(--color-charcoal); line-height: 1.6;">
+                        {{ desc }}
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+
+            <div style="text-align: center; margin-top: 2rem;">
+                <a href="{{ url_for('new_inspection') }}" class="btn btn-accent" style="padding: 0.75rem 2rem;">
+                    Start Live Inspection Now &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

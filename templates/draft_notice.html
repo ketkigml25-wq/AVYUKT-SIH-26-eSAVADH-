@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Draft Legal Notice - eSavadh{% endblock %}
+
+{% block content %}
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Section 18 / Section 49 Draft Legal Notice</h2>
+            <p class="ledger-subtitle">Statutory Show Cause Notice under Legal Metrology Act, 2009</p>
+        </div>
+        <div class="ledger-meta-stamp" style="background: var(--color-red-light); color: var(--color-red); border-color: var(--color-red);">
+            DRAFT &bull; REQUIRES AUTHORIZED CLEARANCE
+        </div>
+    </div>
+
+    <div class="ledger-body">
+        <div style="background: var(--color-red-light); border: 1px solid var(--color-red); padding: 0.75rem 1rem; margin-bottom: 1.5rem; font-size: 0.85rem; color: var(--color-red);">
+            <strong>&#9888; Anti-Arbitrary Action Safeguard:</strong> This is an automated legal draft formulated from verified inspection contraventions. It cannot be dispatched without explicit authorization from the Director / Controller of Legal Metrology.
+        </div>
+
+        <form method="POST" action="{{ url_for('save_draft_notice', inspection_id=inspection.id) }}" onsubmit="const b=this.querySelector('button[type=submit]'); if(b){b.disabled=true; b.innerText='Saving Notice Draft...';}">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Notice Reference Number</label>
+                    <input type="text" class="form-control" name="notice_ref_no" value="{{ notice_data.notice_ref_no }}" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date of Formulated Notice</label>
+                    <input type="text" class="form-control" value="{{ notice_data.notice_date }}" readonly>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Recipient Party / Establishment</label>
+                <input type="text" class="form-control" name="issued_to" value="{{ inspection.product_manufacturer or 'Himalayan Pure Harvest Ltd.' }}" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Draft Legal Notice Text (Fully Editable & Version-Tracked)</label>
+                <textarea class="form-control" name="draft_text" rows="16" style="font-family: monospace; font-size: 0.85rem; line-height: 1.5;">{{ notice_data.draft_text }}</textarea>
+            </div>
+
+            <div class="form-group" style="background: #F9F6F0; border: 1px solid var(--color-ledger-rule-dark); padding: 0.75rem;">
+                <label class="form-label" style="font-weight: 600;">Reason for Formulation / Revision (Recorded in Immutable Audit Trail)</label>
+                <input type="text" class="form-control" name="edit_reason" placeholder="e.g. Initial draft formulated / Updated recipient address / Clarified Rule 6 violations" value="Statutory show cause notice draft formulated under Section 18/49.">
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                <a href="{{ url_for('inspection_detail', inspection_id=inspection.id, step=4) }}" class="btn btn-outline">&larr; Return to Dossier (Step 4)</a>
+                <div style="display: flex; gap: 0.5rem;">
+                    <a href="{{ url_for('compounding_view', inspection_id=inspection.id) }}" class="btn btn-outline">
+                        Explore Section 48 Compounding Settlement &rarr;
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        Save Notice Draft to Dossier
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}

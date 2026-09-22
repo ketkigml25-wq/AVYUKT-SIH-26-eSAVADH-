@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Rules Center & Quick Lookup - eSavadh{% endblock %}
+
+{% block content %}
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Legal Metrology Rules & Statutory Directory</h2>
+            <p class="ledger-subtitle">Time-aware versioned repository of Packaged Commodities Rules, 2011 & Amendments</p>
+        </div>
+        <div class="ledger-meta-stamp">
+            STATUTORY DATABASE v2026.1
+        </div>
+    </div>
+
+    <div class="ledger-body">
+        <!-- Quick Rule Lookup Search Bar -->
+        <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1.25rem; margin-bottom: 1.5rem;">
+            <h3 style="font-family: var(--font-serif); font-size: 1.1rem; color: var(--color-plum); margin-bottom: 0.5rem;">
+                Quick Rule Lookup
+            </h3>
+            <p style="font-size: 0.8rem; color: var(--color-charcoal-muted); margin-bottom: 1rem;">
+                Search statutory requirements by rule code (e.g. <code>R6-1-E</code>), keyword (e.g. <code>MRP</code>, <code>USP</code>), or declaration field.
+            </p>
+            <div style="display: flex; gap: 0.5rem;">
+                <input 
+                    type="text" 
+                    id="rule-search-input" 
+                    class="form-control" 
+                    placeholder="Search Legal Metrology rules (e.g. 'MRP', 'Net Quantity', 'Unit Sale Price', 'Country of Origin')..."
+                    onkeyup="filterRules()"
+                >
+            </div>
+        </div>
+
+        <!-- Rules Table -->
+        <div class="ledger-table-wrapper">
+            <table class="ledger-table" id="rules-table">
+                <thead>
+                    <tr>
+                        <th>Rule Code</th>
+                        <th>Statutory Provision</th>
+                        <th>Effective From</th>
+                        <th>Mandatory Requirement Details</th>
+                        <th>Penalty Provision</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rules %}
+                    <tr class="rule-row">
+                        <td style="white-space: nowrap;">
+                            <strong style="color: var(--color-plum);">{{ r.rule_code }}</strong>
+                            <div class="form-hint">{{ r.legal_section }}</div>
+                        </td>
+                        <td>
+                            <strong>{{ r.rule_name }}</strong>
+                            <p style="font-size: 0.8rem; color: var(--color-charcoal-muted); margin-top: 0.25rem;">
+                                {{ r.description }}
+                            </p>
+                        </td>
+                        <td>
+                            <strong>{{ r.effective_from }}</strong>
+                            <div class="form-hint">
+                                {% if r.effective_to %}Superseded: {{ r.effective_to }}{% else %}Active Enforced{% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <p style="font-size: 0.85rem; line-height: 1.5;">{{ r.requirement_details }}</p>
+                            <div class="form-hint" style="margin-top: 0.25rem;">Applies to: {{ r.applicable_categories }}</div>
+                        </td>
+                        <td>
+                            <span style="font-size: 0.8rem; color: var(--color-red); font-weight: 600;">
+                                {{ r.penalty_clause or 'Section 36(1) Fine up to ₹25,000' }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterRules() {
+    const q = document.getElementById("rule-search-input").value.toLowerCase();
+    document.querySelectorAll(".rule-row").forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(q) ? "" : "none";
+    });
+}
+</script>
+{% endblock %}

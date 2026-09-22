@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Inspector Workbench - eSavadh{% endblock %}
+
+{% block content %}
+<!-- Metrics Summary Ledger -->
+<div class="metric-grid">
+    <div class="metric-card brass-top">
+        <div class="metric-label">OFFICER ON DUTY</div>
+        <div class="metric-value" style="font-size: 1.25rem;">{{ user.name }}</div>
+        <div class="form-hint">{{ user.organization or 'Delhi Enforcement Unit 01' }}</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">TOTAL INSPECTIONS</div>
+        <div class="metric-value">{{ inspections|length }}</div>
+        <div class="form-hint">Enforcement dossiers logged</div>
+    </div>
+    <div class="metric-card green-top">
+        <div class="metric-label">VERIFIED COMPLIANT</div>
+        <div class="metric-value">{{ compliant_count }}</div>
+        <div class="form-hint">Rule 6 mandatory declarations valid</div>
+    </div>
+    <div class="metric-card red-top">
+        <div class="metric-label">FLAGGED VIOLATIONS</div>
+        <div class="metric-value">{{ violation_count }}</div>
+        <div class="form-hint">Section 18 / 36 notice pending</div>
+    </div>
+</div>
+
+<!-- Primary Register Workspace -->
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Field Inspection Workbench & Active Register</h2>
+            <p class="ledger-subtitle">Routine market surveillance, packaged commodity verification, and notice generation</p>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <a href="{{ url_for('new_inspection') }}" class="btn btn-accent">
+                + Begin New Inspection
+            </a>
+            <a href="{{ url_for('ecommerce_monitor') }}" class="btn btn-outline">
+                Check E-Commerce Listing
+            </a>
+        </div>
+    </div>
+
+    <div class="ledger-body">
+        <div class="ledger-table-wrapper">
+            <table class="ledger-table">
+                <thead>
+                    <tr>
+                        <th>Dossier Ref</th>
+                        <th>Product & Category</th>
+                        <th>Date & Time</th>
+                        <th>Source</th>
+                        <th>Compliance Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for insp in inspections %}
+                    <tr>
+                        <td>
+                            <strong>{{ insp.ref_no }}</strong>
+                        </td>
+                        <td>
+                            <div style="font-weight: 600;">{{ insp.product_name or 'Unregistered Commodity' }}</div>
+                            <div class="form-hint">{{ insp.product_category or 'General Commodity' }} &bull; {{ insp.location or 'Market Node' }}</div>
+                        </td>
+                        <td>{{ insp.created_at }}</td>
+                        <td>
+                            {% if insp.source == 'e-commerce' %}
+                            <span class="status-badge status-needs-review">&#128187; E-Commerce</span>
+                            {% else %}
+                            <span class="status-badge" style="background:#EBF3F8; color:#1F5C8B; border-color:#1F5C8B;">&#128247; Field Label</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if insp.compliance_status == 'Compliant' %}
+                            <span class="status-badge status-compliant">&#10003; Compliant</span>
+                            {% elif insp.compliance_status == 'Non-Compliant' %}
+                            <span class="status-badge status-non-compliant">&#10007; Non-Compliant</span>
+                            {% else %}
+                            <span class="status-badge status-needs-review">&#9888; Needs Review</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('inspection_detail', inspection_id=insp.id) }}" class="btn btn-primary btn-sm">
+                                View Dossier &rarr;
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--color-charcoal-muted); padding: 2rem;">
+                            No inspections logged yet. Click <strong>+ Begin New Inspection</strong> to start.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- Assigned Surveillance Tasks -->
+{% if tasks %}
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Assigned Field Directives & Tasks</h2>
+            <p class="ledger-subtitle">Targeted surveillance assignments issued by Directorate</p>
+        </div>
+    </div>
+    <div class="ledger-body">
+        {% for task in tasks %}
+        <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1rem; margin-bottom: 0.75rem; border-left: 4px solid var(--color-brass);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong style="color: var(--color-plum);">{{ task.title }}</strong>
+                <span class="status-badge status-needs-review">Priority: {{ task.priority }}</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--color-charcoal); margin-top: 0.35rem;">{{ task.description }}</p>
+            <div class="form-hint" style="margin-top: 0.35rem;">Due by: {{ task.due_date }} &bull; Status: {{ task.status }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+{% endblock %}

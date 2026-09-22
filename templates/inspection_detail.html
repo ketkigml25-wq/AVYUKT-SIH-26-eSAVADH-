@@ -1,0 +1,1194 @@
+{% extends "base.html" %}
+
+{% block title %}Inspection Dossier {{ dossier.inspection.ref_no }} - eSavadh{% endblock %}
+
+{% block content %}
+<!-- Canonical 5-Step Inspector Guided Stepper -->
+<div style="margin-bottom: 1.25rem; background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); border-left: 4px solid var(--color-plum); padding: 1rem 1.25rem; border-radius: 4px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; flex-wrap: wrap; gap: 0.5rem;">
+        <div style="font-size: 0.85rem; font-weight: 700; color: var(--color-plum); text-transform: uppercase; letter-spacing: 0.5px;">
+            &#128203; Statutory Inspector Workflow &bull; Dossier {{ dossier.inspection.ref_no }}
+        </div>
+        <div style="font-size: 0.85rem; color: var(--color-charcoal-muted);">
+            Investigating Officer: <strong>{{ dossier.inspection.inspector_name }}</strong> &bull; Status: 
+            <strong id="header-status-badge" style="color: {% if dossier.inspection.compliance_status == 'Compliant' %}var(--color-green){% elif dossier.inspection.compliance_status == 'Non-Compliant' %}var(--color-red){% else %}var(--color-amber){% endif %};">
+                {{ dossier.inspection.compliance_status }}
+            </strong>
+        </div>
+    </div>
+
+    <!-- ONE Canonical Guided Stepper (No duplicate tab bars) -->
+    <div class="workflow-stepper" id="canonical-stepper">
+        <button type="button" class="step-nav-btn active" id="step-btn-1" onclick="handleDirectStepClick(1)">
+            <span class="step-num">1</span>
+            <span>Evidence & OCR</span>
+        </button>
+        <button type="button" class="step-nav-btn" id="step-btn-2" onclick="handleDirectStepClick(2)">
+            <span class="step-num">2</span>
+            <span>HITL Review</span>
+        </button>
+        <button type="button" class="step-nav-btn" id="step-btn-3" onclick="handleDirectStepClick(3)">
+            <span class="step-num">3</span>
+            <span>Rule Findings</span>
+        </button>
+        <button type="button" class="step-nav-btn" id="step-btn-4" onclick="handleDirectStepClick(4)">
+            <span class="step-num">4</span>
+            <span>Reports & Notices</span>
+        </button>
+        <button type="button" class="step-nav-btn" id="step-btn-5" onclick="handleDirectStepClick(5)">
+            <span class="step-num">5</span>
+            <span>Audit Integrity</span>
+        </button>
+    </div>
+</div>
+
+<!-- Dossier Masthead Header -->
+<div class="ledger-section" style="border-top: 4px solid var(--color-plum);">
+    <div class="ledger-header" style="background: #EAE5D8;">
+        <div>
+            <div style="font-size: 0.8rem; font-weight: 700; color: var(--color-plum); letter-spacing: 0.5px;">
+                LEGAL METROLOGY INSPECTION DOSSIER
+            </div>
+            <h2 class="ledger-title" style="font-size: 1.5rem; margin-top: 0.2rem;">
+                {{ dossier.inspection.product_name or 'Packaged Commodity' }}
+            </h2>
+            <div class="ledger-subtitle">
+                Ref: <strong>{{ dossier.inspection.ref_no }}</strong> &bull; Location: <strong>{{ dossier.inspection.location or 'Market Surveillance' }}</strong> &bull; Baseline Mfg Date: <strong>{{ dossier.inspection.product_mfg_date or 'N/A' }}</strong>
+            </div>
+        </div>
+        <div style="text-align: right;" id="dossier-status-container">
+            {% if dossier.inspection.compliance_status == 'Compliant' %}
+            <div class="status-badge status-compliant" style="font-size: 0.9rem; padding: 0.35rem 0.85rem;">
+                &#10003; COMPLIANT UNDER PCR 2011
+            </div>
+            {% elif dossier.inspection.compliance_status == 'Non-Compliant' %}
+            <div class="status-badge status-non-compliant" style="font-size: 0.9rem; padding: 0.35rem 0.85rem;">
+                &#10007; NON-COMPLIANCE OBSERVED
+            </div>
+            {% else %}
+            <div class="status-badge status-needs-review" style="font-size: 0.9rem; padding: 0.35rem 0.85rem;">
+                &#9888; OFFICER REVIEW REQUIRED
+            </div>
+            {% endif %}
+            <div class="form-hint" style="margin-top: 0.35rem;">
+                Created: {{ dossier.inspection.created_at }}
+            </div>
+        </div>
+    </div>
+
+    <div class="ledger-body">
+        <!-- ========================================================================= -->
+        <!-- STEP 1: Evidence & Raw OCR Transcript -->
+        <!-- ========================================================================= -->
+        <div id="step-pane-1" class="step-pane">
+            <div style="margin-bottom: 1.5rem;">
+                <h3 style="font-family: var(--font-serif); font-size: 1.15rem; color: var(--color-plum); margin-bottom: 0.5rem;">
+                    Step 1: Packaging Image Evidence & OCR Text Extraction
+                </h3>
+                <p style="font-size: 0.85rem; color: var(--color-charcoal-muted);">
+                    Review captured packaging photographs, image quality scores, and the raw optical character recognition transcript.
+                </p>
+            </div>
+
+            <!-- Evidence Gallery -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                {% for img in dossier.images %}
+                <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <strong>{{ img.view_side }} Panel Evidence</strong>
+                        <span class="status-badge status-compliant">Quality Score: {{ img.quality_score }}%</span>
+                    </div>
+                    <div style="text-align: center; background: #000000; padding: 0.5rem; margin-bottom: 0.5rem;">
+                        <img src="{{ url_for('static', filename=img.original_image_path) }}" alt="Evidence Image" style="max-width: 100%; max-height: 240px; object-fit: contain;">
+                    </div>
+                    <div class="form-hint">
+                        {% if img.is_enhanced %}
+                        <span style="color: var(--color-green); font-weight: 600;">&#10024; Enhanced for OCR processing</span> (Original raw evidence preserved).
+                        {% else %}
+                        Original raw evidence frame.
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <div class="placeholder-notice" style="grid-column: 1 / -1;">
+                    <h3>Evidence Photographs</h3>
+                    <p>Evidence images and enhanced Principal Display Panel copies will appear here.</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Raw OCR Transcript Box -->
+            <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1.25rem; margin-bottom: 1.5rem; border-left: 4px solid var(--color-cerulean);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <div style="font-family: var(--font-serif); font-weight: 700; color: var(--color-plum); font-size: 1.05rem;">
+                        &#128203; Raw Optical Character Recognition (OCR) Transcript
+                    </div>
+                    <div style="font-size: 0.8rem;">
+                        <span class="status-badge" style="background: #EBF3F8; color: #1F5C8B; border-color: #1F5C8B;">
+                            Engine: Native Windows OCR &bull; {{ dossier.ocr_result.detected_languages if dossier.ocr_result else 'English' }}
+                        </span>
+                    </div>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--color-charcoal-muted); margin-bottom: 0.75rem;">
+                    Optical text parsed directly from the package evidence:
+                </div>
+
+                {% if dossier.ocr_result and dossier.ocr_result.raw_text %}
+                <div style="background: #231525; color: #EADBC5; padding: 1rem; font-family: 'Consolas', 'Courier New', monospace; font-size: 0.875rem; line-height: 1.6; max-height: 220px; overflow-y: auto; border: 1px solid var(--color-ledger-rule-dark); white-space: pre-wrap;">{{ dossier.ocr_result.raw_text }}</div>
+                {% else %}
+                <div style="background: var(--color-amber-light); border: 1px solid var(--color-amber); padding: 0.75rem 1rem; color: var(--color-charcoal); font-size: 0.85rem;">
+                    <strong>&#9888; Notice:</strong> No text was detected in the uploaded image. Please ensure packaging text is facing the camera, properly focused, and illuminated.
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Step 1 Navigation Actions -->
+            <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--color-ledger-rule-dark);">
+                <button type="button" class="btn btn-accent" style="padding: 0.75rem 1.75rem; font-size: 0.95rem;" onclick="goToStep(2)">
+                    Continue to Step 2: Review Extracted Declarations &rarr;
+                </button>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- STEP 2: Declarations & HITL Review -->
+        <!-- ========================================================================= -->
+        <div id="step-pane-2" class="step-pane" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+                <div>
+                    <h3 style="font-family: var(--font-serif); font-size: 1.15rem; color: var(--color-plum); margin-bottom: 0.25rem;">
+                        Step 2: Human-In-The-Loop Declaration Review & Verification
+                    </h3>
+                    <p style="font-size: 0.85rem; color: var(--color-charcoal-muted);">
+                        Review each mandatory declaration under Rule 6 of PCR 2011. Confirm, deny, or edit values before rule evaluation.
+                    </p>
+                </div>
+                {% if session.get('user') and session['user']['role'] in ['Inspector', 'Admin'] %}
+                <div>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="confirmAllHighConfidence({{ dossier.inspection.id }})">
+                        &#9889; Confirm All Detected Declarations
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+
+            <div style="margin-bottom: 1.5rem; background: var(--color-cerulean-light); border: 1px solid var(--color-cerulean); padding: 0.75rem 1rem; font-size: 0.85rem; color: var(--color-charcoal);">
+                <strong>&#9432; Verification Protocol:</strong> All confirmed and edited declaration values will be passed directly into the statutory rule evaluation engine in Step 3.
+            </div>
+
+            <!-- Declarations List -->
+            {% for decl in dossier.declarations %}
+            <div class="declaration-card {% if decl.inspector_status == 'Confirmed' %}confirmed{% elif decl.inspector_status == 'Denied' %}denied{% elif decl.inspector_status == 'Edited' %}edited{% endif %}" id="declaration-card-{{ decl.id }}" style="margin-bottom: 1.25rem;">
+                <div class="declaration-header">
+                    <div>
+                        <div class="declaration-field-name">
+                            {{ decl.field_name|replace('_', ' ') }}
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--color-charcoal-muted); margin-top: 0.15rem;">
+                            <strong>Source:</strong> {{ decl.source_view or 'Packaging Evidence Image' }}
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="confidence-meter">
+                            <span>Confidence: {{ (decl.confidence * 100)|int }}%</span>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" style="width: {{ (decl.confidence * 100)|int }}%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;" id="decl-value-display-{{ decl.id }}">
+                    <div style="font-size: 0.95rem; color: var(--color-charcoal);">
+                        <strong>Extracted Value:</strong> <span class="current-decl-val">{{ decl.confirmed_value or decl.extracted_value or 'Not detected on scanned view' }}</span>
+                    </div>
+                    <div>
+                        {% if decl.inspector_status == 'Confirmed' %}
+                        <span class="status-badge status-compliant">&#10003; Verified</span>
+                        {% elif decl.inspector_status == 'Edited' %}
+                        <span class="status-badge" style="background: #E8F4FD; color: #1F5C8B; border-color: #1F5C8B;">&#9998; Officer Override</span>
+                        {% elif decl.inspector_status == 'Denied' %}
+                        <span class="status-badge status-non-compliant">&#10007; Denied</span>
+                        {% elif not decl.extracted_value %}
+                        <span class="status-badge status-needs-review">&#9888; Not Detected / Needs Review</span>
+                        {% else %}
+                        <span class="status-badge status-needs-review">&#9888; Needs Review</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Inline Edit Box (Initially Hidden) -->
+                {% if session.get('user') and session['user']['role'] in ['Inspector', 'Admin'] %}
+                <div id="inline-edit-box-{{ decl.id }}" style="display: none; background: #FFFFFF; border: 1px dashed var(--color-cerulean); padding: 0.75rem; margin-bottom: 0.75rem;">
+                    <label class="form-label" style="font-size: 0.8rem;">Manual Officer Override / Correction:</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="inline-edit-input-{{ decl.id }}" class="form-control" value="{{ decl.confirmed_value or decl.suggested_value or decl.extracted_value or '' }}">
+                        <button type="button" class="btn btn-accent btn-sm" onclick="saveDeclarationEdit({{ decl.id }})">Save</button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="toggleEditBox({{ decl.id }})">Cancel</button>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if decl.suggested_value %}
+                <div class="suggestion-box">
+                    <div class="suggestion-title">&#10024; AI Suggested Value: {{ decl.suggested_value }}</div>
+                    <div style="font-size: 0.8rem; color: var(--color-charcoal-muted); margin-top: 0.2rem;">
+                        <strong>Inference Rationale:</strong> {{ decl.suggestion_reason }}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="hitl-actions">
+                    <span class="inspector-decision-status" style="margin-right: auto;">
+                        {% if decl.inspector_status == 'Confirmed' %}
+                        <span class="status-badge status-compliant">&#10003; Confirmed: {{ decl.confirmed_value or decl.extracted_value }}</span>
+                        {% elif decl.inspector_status == 'Denied' %}
+                        <span class="status-badge status-non-compliant">&#10007; Denied by Officer</span>
+                        {% elif decl.inspector_status == 'Edited' %}
+                        <span class="status-badge" style="background: #E8F4FD; color: #1F5C8B; border-color: #1F5C8B;">&#9998; Edited: {{ decl.confirmed_value }}</span>
+                        {% else %}
+                        <span class="status-badge status-needs-review">&#9888; Awaiting Confirmation</span>
+                        {% endif %}
+                    </span>
+
+                    {% if session.get('user') and session['user']['role'] in ['Inspector', 'Admin'] %}
+                    <button type="button" class="btn btn-success btn-sm decl-decision-btn" data-id="{{ decl.id }}" data-action="confirm" data-value="{{ decl.suggested_value or decl.extracted_value or '' }}" onclick="handleDeclClick(this)">
+                        &#10003; Confirm Value
+                    </button>
+                    <button type="button" class="btn btn-danger btn-sm decl-decision-btn" data-id="{{ decl.id }}" data-action="deny" onclick="handleDeclClick(this)">
+                        &#10007; Deny
+                    </button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="toggleEditBox({{ decl.id }})">
+                        &#9998; Edit / Override
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="placeholder-notice">
+                <h3>No Declarations Extracted</h3>
+                <p>Upload package photographs to trigger multilingual OCR extraction.</p>
+            </div>
+            {% endfor %}
+
+            <!-- Step 2 Navigation Actions -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--color-ledger-rule-dark); flex-wrap: wrap; gap: 1rem;">
+                <button type="button" class="btn btn-outline" onclick="goToStep(1)">
+                    &larr; Back to Step 1: Evidence & OCR
+                </button>
+                <button type="button" id="evaluate-rules-btn" class="btn btn-accent" style="padding: 0.75rem 1.75rem; font-size: 0.95rem;" onclick="evaluateAndGoToStep3({{ dossier.inspection.id }})">
+                    Continue to Step 3: Run Statutory Rule Engine &rarr;
+                </button>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- STEP 3: Compliance Findings -->
+        <!-- ========================================================================= -->
+        <div id="step-pane-3" class="step-pane" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+                <div>
+                    <h3 style="font-family: var(--font-serif); font-size: 1.15rem; color: var(--color-plum); margin-bottom: 0.25rem;">
+                        Step 3: Statutory Rule Compliance & Legal Determinations
+                    </h3>
+                    <p style="font-size: 0.85rem; color: var(--color-charcoal-muted);">
+                        Evaluated against the Legal Metrology Act, 2009 & Packaged Commodities Rules, 2011 (with time-aware amendment applicability).
+                    </p>
+                </div>
+                {% if session.get('user') and session['user']['role'] in ['Inspector', 'Admin'] %}
+                <div>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="evaluateAndGoToStep3({{ dossier.inspection.id }})">
+                        &#8635; Re-evaluate Compliance Rules
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Metric Summary Grid -->
+            <div class="metric-grid" style="margin-bottom: 1.5rem;">
+                <div class="metric-card brass-top">
+                    <div class="metric-label">COMMODITY CATEGORY</div>
+                    <div class="metric-value" style="font-size: 1.15rem;">{{ dossier.inspection.product_category or 'General' }}</div>
+                    <div class="form-hint">Brand: {{ dossier.inspection.product_brand or 'Standard' }}</div>
+                </div>
+                <div class="metric-card cerulean-top">
+                    <div class="metric-label">BASELINE MFG DATE</div>
+                    <div class="metric-value" style="font-size: 1.15rem;">{{ dossier.inspection.product_mfg_date or 'N/A' }}</div>
+                    <div class="form-hint">Time-aware baseline applied</div>
+                </div>
+                <div class="metric-card {% if dossier.inspection.compliance_status == 'Compliant' %}green-top{% else %}red-top{% endif %}">
+                    <div class="metric-label">DETERMINATION</div>
+                    <div class="metric-value" id="step3-determination-val" style="font-size: 1.15rem;">{{ dossier.inspection.compliance_status }}</div>
+                    <div class="form-hint">{{ dossier.findings|length }} Mandates Evaluated</div>
+                </div>
+            </div>
+
+            <!-- Findings Table -->
+            <div class="ledger-table-wrapper" style="margin-bottom: 1.5rem;">
+                <table class="ledger-table">
+                    <thead>
+                        <tr>
+                            <th>Statutory Rule</th>
+                            <th>Declaration Area</th>
+                            <th>Observed on Package</th>
+                            <th>Required Standard</th>
+                            <th>Determination</th>
+                        </tr>
+                    </thead>
+                    <tbody id="findings-table-body">
+                        {% for finding in dossier.findings %}
+                        <tr>
+                            <td>
+                                <strong>{{ finding.rule_code }}</strong>
+                                <div class="form-hint">{{ finding.legal_section }}</div>
+                            </td>
+                            <td style="text-transform: capitalize;">{{ finding.declaration_field|replace('_', ' ') }}</td>
+                            <td>{{ finding.observed_value }}</td>
+                            <td>{{ finding.expected_value }}</td>
+                            <td>
+                                {% if finding.status == 'Compliant' %}
+                                <span class="status-badge status-compliant">&#10003; Compliant</span>
+                                {% elif finding.status == 'Non-Compliant' %}
+                                <span class="status-badge status-non-compliant">&#10007; Violation</span>
+                                {% elif finding.status == 'Not Applicable' %}
+                                <span class="status-badge status-not-applicable">Exempt / N.A.</span>
+                                {% else %}
+                                <span class="status-badge status-needs-review">&#9888; Needs Review</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Step 3 Navigation Actions -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--color-ledger-rule-dark); flex-wrap: wrap; gap: 1rem;">
+                <button type="button" class="btn btn-outline" onclick="goToStep(2)">
+                    &larr; Back to Step 2: HITL Review
+                </button>
+                <button type="button" class="btn btn-accent" style="padding: 0.75rem 1.75rem; font-size: 0.95rem;" onclick="goToStep(4)">
+                    Continue to Step 4: Reports & Notices &rarr;
+                </button>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- STEP 4: Official Report, Notices & Compounding -->
+        <!-- ========================================================================= -->
+        <div id="step-pane-4" class="step-pane" style="display: none;">
+            <div style="margin-bottom: 1.5rem;">
+                <h3 style="font-family: var(--font-serif); font-size: 1.15rem; color: var(--color-plum); margin-bottom: 0.5rem;">
+                    Step 4: Official Compliance Certificate, Notices & Compounding Settlement
+                </h3>
+                <p style="font-size: 0.85rem; color: var(--color-charcoal-muted);">
+                    Finalize official inspection dossier, formulate statutory show cause notice drafts, and calculate compounding fees.
+                </p>
+            </div>
+
+            <!-- Primary Action Buttons -->
+            <div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                <a href="{{ url_for('printable_dossier', inspection_id=dossier.inspection.id) }}" target="_blank" class="btn btn-primary">
+                    &#128438; Open Printable Official Compliance Dossier
+                </a>
+                {% if dossier.inspection.compliance_status == 'Non-Compliant' and session.get('user') and session['user']['role'] in ['Inspector', 'Admin'] %}
+                <a href="{{ url_for('draft_notice_view', inspection_id=dossier.inspection.id) }}" class="btn btn-accent">
+                    &#9998; Generate Section 18 Draft Legal Notice
+                </a>
+                <a href="{{ url_for('compounding_view', inspection_id=dossier.inspection.id) }}" class="btn btn-outline">
+                    &#128176; Calculate Section 48 Compounding Settlement
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- Official Report Certificate & Revision Box -->
+            {% if dossier.report %}
+            <div style="background: #FFFFFF; border: 2px solid var(--color-plum); padding: 1.5rem; margin-bottom: 1.5rem; position: relative;">
+                <!-- Version Badge & Edit Bar -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        {% if dossier.report.version_no and dossier.report.version_no > 1 %}
+                        <span class="status-badge" style="background: #FFF8E6; color: #8A5800; border-color: #C88A2E; font-weight: 700; font-size: 0.9rem; padding: 0.35rem 0.75rem;">
+                            &#9888; REVISED REPORT (Version {{ dossier.report.version_no }})
+                        </span>
+                        {% else %}
+                        <span class="status-badge status-compliant" style="font-weight: 700; font-size: 0.9rem; padding: 0.35rem 0.75rem;">
+                            ORIGINAL REPORT (Version 1)
+                        </span>
+                        {% endif %}
+                    </div>
+                    <span class="status-badge {% if dossier.report.final_status == 'Compliant' %}status-compliant{% else %}status-non-compliant{% endif %}">
+                        {{ dossier.report.final_status }}
+                    </span>
+                </div>
+
+                <h3 style="font-family: var(--font-serif); font-size: 1.25rem; color: var(--color-plum); margin-bottom: 0.25rem;">
+                    {{ dossier.report.title }}
+                </h3>
+
+                <div class="form-hint" style="margin-bottom: 1rem; line-height: 1.6;">
+                    Certificate No: <strong>{{ dossier.report.report_number }}</strong> &bull; Generated: {{ dossier.report.generated_at }} by <strong>{{ dossier.report.generator_name or dossier.inspection.inspector_name }}</strong>
+                    {% if dossier.report.version_no and dossier.report.version_no > 1 %}
+                    <br>
+                    <span style="color: #8A5800;">
+                        &#9998; Last Edited on <strong>{{ dossier.report.last_edited_at }}</strong> by <strong>{{ dossier.report.editor_name or 'Inspector' }}</strong> ({{ dossier.report.editor_role or 'Inspector' }}).
+                        Reason: <em>"{{ dossier.report.last_edit_reason }}"</em>
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Report Content Display Grid -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div style="background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark); padding: 0.85rem;">
+                        <strong style="font-size: 0.8rem; color: var(--color-plum); text-transform: uppercase;">Inspector Observations:</strong>
+                        <p id="report-display-observations" style="font-size: 0.88rem; color: var(--color-charcoal); line-height: 1.5; margin-top: 0.25rem;">
+                            {{ dossier.report.observations or 'Physical container and primary display panel inspected. All declarations verified against statutory criteria.' }}
+                        </p>
+                    </div>
+                    <div style="background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark); padding: 0.85rem;">
+                        <strong style="font-size: 0.8rem; color: var(--color-plum); text-transform: uppercase;">Remarks & Findings:</strong>
+                        <p id="report-display-remarks" style="font-size: 0.88rem; color: var(--color-charcoal); line-height: 1.5; margin-top: 0.25rem;">
+                            {{ dossier.report.remarks or dossier.inspection.overall_notes or 'All declarations evaluated under Legal Metrology (Packaged Commodities) Rules, 2011.' }}
+                        </p>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div style="background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark); padding: 0.85rem;">
+                        <strong style="font-size: 0.8rem; color: var(--color-plum); text-transform: uppercase;">Corrective Actions:</strong>
+                        <p id="report-display-corrective" style="font-size: 0.88rem; color: var(--color-charcoal); line-height: 1.5; margin-top: 0.25rem;">
+                            {{ dossier.report.corrective_actions or 'Ensure full font height and contrast requirements under Rule 7 for all subsequent production batches.' }}
+                        </p>
+                    </div>
+                    <div style="background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark); padding: 0.85rem;">
+                        <strong style="font-size: 0.8rem; color: var(--color-plum); text-transform: uppercase;">Recommendations:</strong>
+                        <p id="report-display-recommendations" style="font-size: 0.88rem; color: var(--color-charcoal); line-height: 1.5; margin-top: 0.25rem;">
+                            {{ dossier.report.recommendations or 'Proceed with enforcement record archival and routine periodic surveillance.' }}
+                        </p>
+                    </div>
+                </div>
+
+                <div style="background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark); padding: 0.85rem; margin-bottom: 1.25rem;">
+                    <strong style="font-size: 0.8rem; color: var(--color-plum); text-transform: uppercase;">Summary / Determination:</strong>
+                    <p id="report-display-summary" style="font-size: 0.88rem; color: var(--color-charcoal); line-height: 1.5; margin-top: 0.25rem;">
+                        {{ dossier.report.summary or dossier.inspection.overall_notes }}
+                    </p>
+                </div>
+
+                <!-- Report Action Buttons -->
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; border-top: 1px solid var(--color-ledger-rule-dark); padding-top: 1rem;">
+                    {% if session.get('user') and session['user']['role'] in ['Inspector', 'Admin'] %}
+                    <button type="button" class="btn btn-accent btn-sm" onclick="toggleReportEditor()">
+                        &#9998; Edit Report Fields & Observations
+                    </button>
+                    {% endif %}
+                    <button type="button" class="btn btn-outline btn-sm" onclick="toggleReportHistory()">
+                        &#128220; View Change History ({{ dossier.report_revisions|length }} Revision{% if dossier.report_revisions|length != 1 %}s{% endif %})
+                    </button>
+                    <a href="{{ url_for('printable_dossier', inspection_id=dossier.inspection.id) }}" target="_blank" class="btn btn-primary btn-sm">
+                        &#128438; Open Printable Dossier (Version {{ dossier.report.version_no or 1 }})
+                    </a>
+                </div>
+
+                <!-- Editable Report Drawer (Initially Hidden) -->
+                {% if session.get('user') and session['user']['role'] in ['Inspector', 'Admin'] %}
+                <div id="report-edit-drawer" style="display: none; background: #FAF7F0; border: 2px dashed var(--color-cerulean); padding: 1.25rem; margin-top: 1.25rem; border-radius: 4px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h4 style="font-family: var(--font-serif); font-size: 1.05rem; color: var(--color-plum); margin: 0;">
+                            &#9998; Edit Report Observations & Corrective Directives
+                        </h4>
+                        <span class="status-badge" style="background: #E8F4FD; color: #1F5C8B; border-color: #1F5C8B;">
+                            New Revision (v{{ (dossier.report.version_no or 1) + 1 }})
+                        </span>
+                    </div>
+
+                    <div style="background: #EBF3FA; border: 1px solid #1F5C8B; padding: 0.65rem 0.85rem; font-size: 0.8rem; color: #1F5C8B; margin-bottom: 1rem;">
+                        <strong>&#128274; Evidence Preservation Safeguard:</strong> Original product photographs, raw OCR text streams, and original creation timestamps are permanently immutable. Only inspector observations, remarks, corrective actions, and summaries are updated with complete audit versioning.
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label">Inspector Observations:</label>
+                            <textarea id="edit-report-observations" class="form-control" rows="3" data-orig-val="{{ dossier.report.observations or 'Physical container and primary display panel inspected. All declarations verified against statutory criteria.' }}">{{ dossier.report.observations or 'Physical container and primary display panel inspected. All declarations verified against statutory criteria.' }}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Remarks & Findings:</label>
+                            <textarea id="edit-report-remarks" class="form-control" rows="3" data-orig-val="{{ dossier.report.remarks or dossier.inspection.overall_notes or 'All declarations evaluated under Legal Metrology (Packaged Commodities) Rules, 2011.' }}">{{ dossier.report.remarks or dossier.inspection.overall_notes or 'All declarations evaluated under Legal Metrology (Packaged Commodities) Rules, 2011.' }}</textarea>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label">Corrective Actions Mandated:</label>
+                            <textarea id="edit-report-corrective" class="form-control" rows="3" data-orig-val="{{ dossier.report.corrective_actions or 'Ensure full font height and contrast requirements under Rule 7 for all subsequent production batches.' }}">{{ dossier.report.corrective_actions or 'Ensure full font height and contrast requirements under Rule 7 for all subsequent production batches.' }}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Statutory Recommendations:</label>
+                            <textarea id="edit-report-recommendations" class="form-control" rows="3" data-orig-val="{{ dossier.report.recommendations or 'Proceed with enforcement record archival and routine periodic surveillance.' }}">{{ dossier.report.recommendations or 'Proceed with enforcement record archival and routine periodic surveillance.' }}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label">Summary / Official Determination:</label>
+                        <textarea id="edit-report-summary" class="form-control" rows="2" data-orig-val="{{ dossier.report.summary or dossier.inspection.overall_notes }}">{{ dossier.report.summary or dossier.inspection.overall_notes }}</textarea>
+                    </div>
+
+                    <div class="form-group" style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 0.75rem; margin-bottom: 1rem;">
+                        <label class="form-label" style="font-weight: 700; color: #8A5800;">Reason for Edit / Revision (Mandatory for Audit Trail):</label>
+                        <input type="text" id="edit-report-reason" class="form-control" placeholder="e.g. Added field inspection observations / Corrected remarks based on officer review" value="Correction and addition of inspection observations.">
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="cancelReportEditor()">Cancel</button>
+                        <button type="button" id="save-report-revision-btn" class="btn btn-accent btn-sm" onclick="saveReportRevision({{ dossier.inspection.id }})">
+                            &#10004; Save Report Revision (v{{ (dossier.report.version_no or 1) + 1 }})
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Change History Drawer (Initially Hidden) -->
+                <div id="report-history-drawer" style="display: none; background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1.25rem; margin-top: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h4 style="font-family: var(--font-serif); font-size: 1.05rem; color: var(--color-plum); margin: 0;">
+                            &#128220; Complete Report Revision & Change History
+                        </h4>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="toggleReportHistory()">Close</button>
+                    </div>
+
+                    <div class="ledger-table-wrapper">
+                        <table class="ledger-table" style="font-size: 0.85rem;">
+                            <thead>
+                                <tr>
+                                    <th>Version</th>
+                                    <th>Edited By</th>
+                                    <th>Timestamp</th>
+                                    <th>Reason for Revision</th>
+                                    <th>Changes & Diffs</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Version 1</strong></td>
+                                    <td>{{ dossier.report.generator_name or dossier.inspection.inspector_name }}</td>
+                                    <td>{{ dossier.report.generated_at }}</td>
+                                    <td>Initial Inspection Report Generation</td>
+                                    <td><span class="status-badge status-compliant">Original Master</span></td>
+                                </tr>
+                                {% for rev in dossier.report_revisions %}
+                                <tr>
+                                    <td><strong>Version {{ rev.version_no }}</strong></td>
+                                    <td>{{ rev.editor_name }} ({{ rev.edited_role or 'Inspector' }})</td>
+                                    <td>{{ rev.edited_at }}</td>
+                                    <td><strong>{{ rev.edit_reason }}</strong></td>
+                                    <td>
+                                        {% for f in rev.changed_fields_list %}
+                                        <div style="margin-bottom: 0.25rem;">
+                                            <span style="font-weight: 600; text-transform: capitalize;">{{ f|replace('_', ' ') }}:</span>
+                                            <span style="color: var(--color-charcoal-muted); text-decoration: line-through; margin-right: 0.25rem;">"{{ rev.old_values_dict.get(f, '')|truncate(40) }}"</span>
+                                            &rarr;
+                                            <span style="color: var(--color-plum); font-weight: 600;">"{{ rev.new_values_dict.get(f, '')|truncate(40) }}"</span>
+                                        </div>
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Saved Notices Section -->
+            <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1.25rem; margin-bottom: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h4 style="font-family: var(--font-serif); font-size: 1.05rem; color: var(--color-plum);">
+                        &#128196; Saved Section 18 Draft Legal Notices ({{ dossier.notices|length }})
+                    </h4>
+                    {% if dossier.inspection.compliance_status == 'Non-Compliant' and session.get('user') and session['user']['role'] in ['Inspector', 'Admin'] %}
+                    <a href="{{ url_for('draft_notice_view', inspection_id=dossier.inspection.id) }}" class="btn btn-outline btn-sm">
+                        + Formulate / Revise Draft Notice
+                    </a>
+                    {% endif %}
+                </div>
+
+                {% if dossier.notices %}
+                <div class="ledger-table-wrapper">
+                    <table class="ledger-table">
+                        <thead>
+                            <tr>
+                                <th>Notice Ref</th>
+                                <th>Issued To</th>
+                                <th>Version & Status</th>
+                                <th>Last Formulated / Edited</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for notice in dossier.notices %}
+                            <tr>
+                                <td>
+                                    <strong>{{ notice.notice_ref_no }}</strong>
+                                    {% if notice.version_no and notice.version_no > 1 %}
+                                    <span class="status-badge" style="background: #FFF8E6; color: #8A5800; border-color: #C88A2E; margin-left: 0.35rem;">v{{ notice.version_no }} (Revised)</span>
+                                    {% else %}
+                                    <span class="status-badge" style="background: #F4F8F4; color: #265930; border-color: #3B7E48; margin-left: 0.35rem;">v1 (Draft)</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ notice.issued_to }}</td>
+                                <td><span class="status-badge" style="background: var(--color-red-light); color: var(--color-red); border-color: var(--color-red);">{{ notice.status }}</span></td>
+                                <td>
+                                    {{ notice.last_edited_at or notice.created_at }}
+                                    <div class="form-hint">By: {{ notice.editor_name or notice.officer_name }}</div>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 0.35rem;">
+                                        <a href="{{ url_for('print_notice', notice_id=notice.id) }}" target="_blank" class="btn btn-outline btn-sm">
+                                            &#128438; View & Print
+                                        </a>
+                                        {% if session.get('user') and session['user']['role'] in ['Inspector', 'Admin'] %}
+                                        <a href="{{ url_for('draft_notice_view', inspection_id=dossier.inspection.id) }}" class="btn btn-outline btn-sm">
+                                            &#9998; Edit
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div style="font-size: 0.85rem; color: var(--color-charcoal-muted); padding: 0.5rem 0;">
+                    No draft notices currently saved for this dossier.
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Saved Compounding Records Section -->
+            <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1.25rem; margin-bottom: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h4 style="font-family: var(--font-serif); font-size: 1.05rem; color: var(--color-plum);">
+                        &#128176; Section 48 Compounding Settlement Proposals ({{ dossier.compounding_records|length }})
+                    </h4>
+                    {% if dossier.inspection.compliance_status == 'Non-Compliant' and session.get('user') and session['user']['role'] in ['Inspector', 'Admin'] %}
+                    <a href="{{ url_for('compounding_view', inspection_id=dossier.inspection.id) }}" class="btn btn-outline btn-sm">
+                        + Calculate / Revise Settlement
+                    </a>
+                    {% endif %}
+                </div>
+
+                {% if dossier.compounding_records %}
+                <div class="ledger-table-wrapper">
+                    <table class="ledger-table">
+                        <thead>
+                            <tr>
+                                <th>Record Ref</th>
+                                <th>Offense Section</th>
+                                <th>Composition Fee</th>
+                                <th>Version & Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for comp in dossier.compounding_records %}
+                            <tr>
+                                <td>
+                                    <strong>CMP-2026-{{ comp.id }}</strong>
+                                    {% if comp.version_no and comp.version_no > 1 %}
+                                    <span class="status-badge" style="background: #FFF8E6; color: #8A5800; border-color: #C88A2E; margin-left: 0.35rem;">v{{ comp.version_no }} (Revised)</span>
+                                    {% else %}
+                                    <span class="status-badge" style="background: #F4F8F4; color: #265930; border-color: #3B7E48; margin-left: 0.35rem;">v1 (Proposed)</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ comp.offense_section }}</td>
+                                <td><strong>₹ {{ "{:,.2f}".format(comp.proposed_fee) }}</strong></td>
+                                <td><span class="status-badge status-needs-review">{{ comp.status }}</span></td>
+                                <td>
+                                    <div style="display: flex; gap: 0.35rem;">
+                                        <a href="{{ url_for('print_compounding', comp_id=comp.id) }}" target="_blank" class="btn btn-outline btn-sm">
+                                            &#128438; View & Print
+                                        </a>
+                                        {% if session.get('user') and session['user']['role'] in ['Inspector', 'Admin'] %}
+                                        <a href="{{ url_for('compounding_view', inspection_id=dossier.inspection.id) }}" class="btn btn-outline btn-sm">
+                                            &#9998; Edit
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div style="font-size: 0.85rem; color: var(--color-charcoal-muted); padding: 0.5rem 0;">
+                    No compounding settlement orders formulated for this dossier.
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Final Officer Sign-off Box -->
+            {% if session.get('user') and session['user']['role'] in ['Inspector', 'Admin'] %}
+            <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1.25rem;">
+                <h4 style="font-family: var(--font-serif); font-size: 1.05rem; color: var(--color-plum); margin-bottom: 0.5rem;">
+                    Investigating Officer Final Notes & Sign-Off
+                </h4>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <textarea id="final-notes-input" class="form-control" rows="3" placeholder="Add final surveillance conclusions or sealing notes...">{{ dossier.inspection.overall_notes or '' }}</textarea>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                    <button type="button" class="btn btn-primary" onclick="finalizeDossier({{ dossier.inspection.id }})">
+                        &#10004; Save Notes & Finalize Inspection Sign-off
+                    </button>
+                    <button type="button" class="btn btn-outline" onclick="goToStep(5)">
+                        View Complete Audit History &rarr;
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Step 4 Navigation Actions -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--color-ledger-rule-dark); flex-wrap: wrap; gap: 1rem;">
+                <button type="button" class="btn btn-outline" onclick="goToStep(3)">
+                    &larr; Back to Step 3: Rule Findings
+                </button>
+                <button type="button" class="btn btn-accent" style="padding: 0.75rem 1.75rem; font-size: 0.95rem;" onclick="goToStep(5)">
+                    Continue to Step 5: Audit Integrity &rarr;
+                </button>
+            </div>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- STEP 5: Audit Trail -->
+        <!-- ========================================================================= -->
+        <div id="step-pane-5" class="step-pane" style="display: none;">
+            <div style="margin-bottom: 1.5rem;">
+                <h3 style="font-family: var(--font-serif); font-size: 1.15rem; color: var(--color-plum); margin-bottom: 0.5rem;">
+                    Step 5: Immutable Legal Metrology Audit Trail & Chain of Custody
+                </h3>
+                <p style="font-size: 0.85rem; color: var(--color-charcoal-muted);">
+                    Timestamped audit logs of all officer decisions, declaration reviews, edits, report generations, and draft notice formations.
+                </p>
+            </div>
+
+            <!-- Final Summary Card -->
+            <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1.25rem; margin-bottom: 1.5rem; border-left: 4px solid var(--color-green);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <h4 style="font-family: var(--font-serif); font-size: 1.05rem; color: var(--color-plum); margin: 0;">
+                        &#128274; Inspection Record Integrity Status: VERIFIED
+                    </h4>
+                    <span class="status-badge status-compliant">&#10003; SHA-256 Chained</span>
+                </div>
+                <div style="font-size: 0.85rem; color: var(--color-charcoal); line-height: 1.6;">
+                    Dossier <strong>{{ dossier.inspection.ref_no }}</strong> for <strong>{{ dossier.inspection.product_name }}</strong>. All timestamps and officer decisions recorded immutably under Section 18/48 procedural compliance standards.
+                </div>
+            </div>
+
+            <div class="ledger-table-wrapper" style="margin-bottom: 1.5rem;">
+                <table class="ledger-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Officer / User</th>
+                            <th>Action Type</th>
+                            <th>Audit Trail Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-table-body">
+                        {% for log in dossier.audit_logs %}
+                        <tr>
+                            <td>{{ log.timestamp }}</td>
+                            <td><strong>{{ log.user_name or 'System Officer' }}</strong></td>
+                            <td><span class="status-badge" style="background: #EAE5D8; color: var(--color-charcoal);">{{ log.action }}</span></td>
+                            <td>{{ log.details }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td>{{ dossier.inspection.created_at }}</td>
+                            <td>{{ dossier.inspection.inspector_name }}</td>
+                            <td><span class="status-badge status-compliant">DOSSIER_CREATED</span></td>
+                            <td>Initial field surveillance logged for {{ dossier.inspection.product_name }}.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Step 5 Navigation Actions -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--color-ledger-rule-dark); flex-wrap: wrap; gap: 1rem;">
+                <button type="button" class="btn btn-outline" onclick="goToStep(4)">
+                    &larr; Back to Step 4: Reports & Notices
+                </button>
+                <div style="display: flex; gap: 0.5rem;">
+                    <a href="{{ url_for('printable_dossier', inspection_id=dossier.inspection.id) }}" target="_blank" class="btn btn-outline">
+                        &#128438; Print Complete Dossier
+                    </a>
+                    <a href="{{ url_for('inspections_list') }}" class="btn btn-primary">
+                        &#128196; Return to Inspections Register
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Track current active workflow step
+let currentWorkflowStep = 1;
+
+/**
+ * Switch canonical guided workflow step
+ * @param {number} stepNum - Step index (1 to 5)
+ * @param {boolean} updateUrl - Whether to update the URL parameter
+ */
+function goToStep(stepNum, updateUrl = true) {
+    if (stepNum < 1 || stepNum > 5) return;
+    currentWorkflowStep = stepNum;
+
+    // Toggle panes and stepper button styles
+    for (let i = 1; i <= 5; i++) {
+        const pane = document.getElementById(`step-pane-${i}`);
+        const btn = document.getElementById(`step-btn-${i}`);
+        
+        if (pane) {
+            pane.style.display = (i === stepNum) ? "block" : "none";
+        }
+        
+        if (btn) {
+            btn.classList.remove("active");
+            if (i < stepNum) {
+                btn.classList.add("completed");
+            } else {
+                btn.classList.remove("completed");
+            }
+            if (i === stepNum) {
+                btn.classList.add("active");
+            }
+        }
+    }
+
+    if (updateUrl && window.history && window.history.replaceState) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("step", stepNum);
+        window.history.replaceState(null, "", url.toString());
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/**
+ * Handle direct clicks on top stepper tabs with validation
+ * @param {number} targetStep 
+ */
+function handleDirectStepClick(targetStep) {
+    if (targetStep === currentWorkflowStep) return;
+
+    // Validation checks for direct navigation
+    if (targetStep >= 3) {
+        const declCards = document.querySelectorAll(".declaration-card");
+        if (declCards.length === 0) {
+            showToast("Complete Step 1 evidence & OCR processing before proceeding.", "warning");
+            return;
+        }
+    }
+
+    goToStep(targetStep);
+}
+
+function toggleEditBox(declId) {
+    const box = document.getElementById(`inline-edit-box-${declId}`);
+    if (box) {
+        box.style.display = box.style.display === "none" ? "block" : "none";
+    }
+}
+
+async function saveDeclarationEdit(declId) {
+    const input = document.getElementById(`inline-edit-input-${declId}`);
+    if (!input) return;
+    const newVal = input.value.trim();
+
+    try {
+        const res = await fetch(`/api/declarations/${declId}/edit`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ value: newVal })
+        });
+        const data = await res.json();
+        if (data.success) {
+            const card = document.getElementById(`declaration-card-${declId}`);
+            if (card) {
+                card.className = "declaration-card edited";
+                const badge = card.querySelector(".inspector-decision-status");
+                if (badge) {
+                    badge.innerHTML = `<span class="status-badge" style="background: #E8F4FD; color: #1F5C8B; border-color: #1F5C8B;">&#9998; Edited: ${newVal}</span>`;
+                }
+                const valDisplay = card.querySelector(".current-decl-val");
+                if (valDisplay) valDisplay.innerText = newVal;
+            }
+            toggleEditBox(declId);
+            showToast(`Declaration updated: '${newVal}'`, "success");
+        }
+    } catch (e) {
+        console.error("Error editing declaration:", e);
+        showToast("Error updating declaration.", "error");
+    }
+}
+
+async function confirmAllHighConfidence(inspectionId) {
+    try {
+        const res = await fetch(`/api/declarations/confirm-all/${inspectionId}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`Confirmed ${data.updated_count} declarations!`, "success");
+            // Mark all cards as confirmed in UI
+            document.querySelectorAll(".declaration-card").forEach(card => {
+                card.className = "declaration-card confirmed";
+                const badge = card.querySelector(".inspector-decision-status");
+                const currentVal = card.querySelector(".current-decl-val") ? card.querySelector(".current-decl-val").innerText : "Verified";
+                if (badge) {
+                    badge.innerHTML = `<span class="status-badge status-compliant">&#10003; Confirmed: ${currentVal}</span>`;
+                }
+            });
+        }
+    } catch (e) {
+        console.error("Error bulk confirming:", e);
+        showToast("Error during bulk confirmation.", "error");
+    }
+}
+
+/**
+ * Re-evaluate rules against confirmed Step 2 data and transition directly to Step 3
+ * @param {number} inspectionId 
+ */
+async function evaluateAndGoToStep3(inspectionId) {
+    const btn = document.getElementById("evaluate-rules-btn");
+    const origHtml = btn ? btn.innerHTML : "";
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = "&#9203; Running Rule Compliance Engine...";
+    }
+
+    try {
+        const res = await fetch(`/api/inspection/${inspectionId}/evaluate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+        });
+        const data = await res.json();
+        if (data.success) {
+            // Update determination badge in dossier masthead
+            const statusContainer = document.getElementById("dossier-status-container");
+            const headerStatus = document.getElementById("header-status-badge");
+            if (headerStatus) {
+                headerStatus.innerText = data.overall_status;
+                headerStatus.style.color = data.overall_status === 'Compliant' ? 'var(--color-green)' : (data.overall_status === 'Non-Compliant' ? 'var(--color-red)' : 'var(--color-amber)');
+            }
+            if (statusContainer) {
+                if (data.overall_status === "Compliant") {
+                    statusContainer.innerHTML = `
+                        <div class="status-badge status-compliant" style="font-size: 0.9rem; padding: 0.35rem 0.85rem;">
+                            &#10003; COMPLIANT UNDER PCR 2011
+                        </div>
+                        <div class="form-hint" style="margin-top: 0.35rem;">Status: Live Updated</div>`;
+                } else if (data.overall_status === "Non-Compliant") {
+                    statusContainer.innerHTML = `
+                        <div class="status-badge status-non-compliant" style="font-size: 0.9rem; padding: 0.35rem 0.85rem;">
+                            &#10007; NON-COMPLIANCE OBSERVED
+                        </div>
+                        <div class="form-hint" style="margin-top: 0.35rem;">Status: Live Updated</div>`;
+                } else {
+                    statusContainer.innerHTML = `
+                        <div class="status-badge status-needs-review" style="font-size: 0.9rem; padding: 0.35rem 0.85rem;">
+                            &#9888; OFFICER REVIEW REQUIRED
+                        </div>
+                        <div class="form-hint" style="margin-top: 0.35rem;">Status: Live Updated</div>`;
+                }
+            }
+
+            // Update determination metric card on Step 3
+            const metricVal = document.getElementById("step3-determination-val");
+            if (metricVal) metricVal.innerText = data.overall_status;
+
+            // Update findings table body dynamically
+            if (data.findings && data.findings.length > 0) {
+                const tbody = document.getElementById("findings-table-body");
+                if (tbody) {
+                    tbody.innerHTML = data.findings.map(f => {
+                        let badgeHtml = '';
+                        if (f.status === 'Compliant') {
+                            badgeHtml = '<span class="status-badge status-compliant">&#10003; Compliant</span>';
+                        } else if (f.status === 'Non-Compliant') {
+                            badgeHtml = '<span class="status-badge status-non-compliant">&#10007; Violation</span>';
+                        } else if (f.status === 'Not Applicable') {
+                            badgeHtml = '<span class="status-badge status-not-applicable">Exempt / N.A.</span>';
+                        } else {
+                            badgeHtml = '<span class="status-badge status-needs-review">&#9888; Needs Review</span>';
+                        }
+
+                        return `
+                            <tr>
+                                <td>
+                                    <strong>${f.rule_code || ''}</strong>
+                                    <div class="form-hint">${f.legal_section || ''}</div>
+                                </td>
+                                <td style="text-transform: capitalize;">${(f.declaration_field || '').replace(/_/g, ' ')}</td>
+                                <td>${f.observed_value || 'N/A'}</td>
+                                <td>${f.expected_value || 'N/A'}</td>
+                                <td>${badgeHtml}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            }
+
+            showToast(`Rule evaluation complete. Overall determination: ${data.overall_status}`, "success");
+            
+            // Go to Step 3 seamlessly (No page refresh)
+            goToStep(3);
+        } else {
+            showToast("Failed to evaluate rules: " + (data.error || "Unknown error"), "error");
+        }
+    } catch (e) {
+        console.error("Error in rule evaluation:", e);
+        showToast("Network error while evaluating rules.", "error");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml || "Continue to Step 3: Run Statutory Rule Engine &rarr;";
+        }
+    }
+}
+
+async function finalizeDossier(inspectionId) {
+    const notesInput = document.getElementById("final-notes-input");
+    const notes = notesInput ? notesInput.value.trim() : "";
+
+    try {
+        const res = await fetch(`/api/inspection/${inspectionId}/finalize`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ notes: notes })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast("Dossier finalized & signed off by Investigating Officer.", "success");
+        }
+    } catch (e) {
+        console.error("Error finalizing:", e);
+        showToast("Error finalizing dossier.", "error");
+    }
+}
+
+function toggleReportEditor() {
+    const drawer = document.getElementById("report-edit-drawer") || document.getElementById("report-editor-drawer");
+    if (drawer) {
+        const isHidden = (drawer.style.display === "none" || !drawer.style.display);
+        drawer.style.display = isHidden ? "block" : "none";
+        if (isHidden) {
+            drawer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            const obs = document.getElementById("edit-report-observations");
+            if (obs) obs.focus();
+        }
+    }
+}
+
+function cancelReportEditor() {
+    const drawer = document.getElementById("report-edit-drawer") || document.getElementById("report-editor-drawer");
+    if (drawer) {
+        drawer.style.display = "none";
+        const obs = document.getElementById("edit-report-observations");
+        if (obs && obs.dataset.origVal !== undefined) obs.value = obs.dataset.origVal;
+        const rem = document.getElementById("edit-report-remarks");
+        if (rem && rem.dataset.origVal !== undefined) rem.value = rem.dataset.origVal;
+        const corr = document.getElementById("edit-report-corrective");
+        if (corr && corr.dataset.origVal !== undefined) corr.value = corr.dataset.origVal;
+        const rec = document.getElementById("edit-report-recommendations");
+        if (rec && rec.dataset.origVal !== undefined) rec.value = rec.dataset.origVal;
+        const sum = document.getElementById("edit-report-summary");
+        if (sum && sum.dataset.origVal !== undefined) sum.value = sum.dataset.origVal;
+    }
+}
+
+function toggleReportHistory() {
+    const drawer = document.getElementById("report-history-drawer");
+    if (drawer) {
+        const isHidden = (drawer.style.display === "none" || !drawer.style.display);
+        drawer.style.display = isHidden ? "block" : "none";
+        if (isHidden) {
+            drawer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+}
+
+async function saveReportRevision(inspectionId) {
+    const obs = document.getElementById("edit-report-observations")?.value || "";
+    const rem = document.getElementById("edit-report-remarks")?.value || "";
+    const corr = document.getElementById("edit-report-corrective")?.value || "";
+    const rec = document.getElementById("edit-report-recommendations")?.value || "";
+    const sum = document.getElementById("edit-report-summary")?.value || "";
+    const reason = document.getElementById("edit-report-reason")?.value.trim() || "";
+
+    if (!reason) {
+        showToast("Please provide a reason for editing/revising the report.", "error");
+        document.getElementById("edit-report-reason")?.focus();
+        return;
+    }
+
+    const btn = document.getElementById("save-report-revision-btn");
+    const origHtml = btn ? btn.innerHTML : "";
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = "&#9203; Saving Revision...";
+    }
+
+    try {
+        const res = await fetch(`/api/inspection/${inspectionId}/report/edit`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                observations: obs,
+                remarks: rem,
+                corrective_actions: corr,
+                recommendations: rec,
+                summary: sum,
+                edit_reason: reason
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(data.message || "Report revision saved successfully!", "success");
+            setTimeout(() => {
+                window.location.href = window.location.pathname + "?step=4";
+            }, 600);
+        } else {
+            showToast(data.error || "Failed to save report revision.", "error");
+        }
+    } catch (e) {
+        console.error("Error saving report revision:", e);
+        showToast("Network error while saving report revision.", "error");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    }
+}
+
+// Initialize Active Step from URL on Load
+document.addEventListener("DOMContentLoaded", () => {
+    const params = new URLSearchParams(window.location.search);
+    const stepParam = parseInt(params.get("step") || "1", 10);
+    if (!isNaN(stepParam) && stepParam >= 1 && stepParam <= 5) {
+        goToStep(stepParam, false);
+    } else {
+        goToStep(1, false);
+    }
+});
+</script>
+{% endblock %}

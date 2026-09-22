@@ -1,0 +1,178 @@
+/* ==========================================================================
+   eSavadh — Mobile-First Field Inspection & Camera Layout
+   Made by Team Avyukt
+   ========================================================================== */
+
+/* Multi-side Capture Chips */
+.side-selector-container {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.5rem 0;
+  margin-bottom: 1rem;
+}
+
+.side-chip {
+  padding: 0.5rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid var(--color-ledger-rule-dark);
+  background: var(--color-ledger-card);
+  color: var(--color-charcoal);
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.side-chip.active {
+  background: var(--color-plum);
+  color: #FFFFFF;
+  border-color: var(--color-plum-dark);
+}
+
+.side-chip.captured {
+  border-color: var(--color-green);
+  color: var(--color-green);
+}
+
+.side-chip.recommended {
+  border: 2px dashed var(--color-brass);
+  background: var(--color-brass-muted);
+  color: var(--color-plum);
+  animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+  0% { box-shadow: 0 0 0 0 rgba(184, 134, 59, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(184, 134, 59, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(184, 134, 59, 0); }
+}
+
+/* Camera Viewfinder Box */
+.camera-viewfinder {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  background: #111111;
+  border: 2px solid var(--color-plum);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.viewfinder-guide-overlay {
+  position: absolute;
+  top: 15px;
+  bottom: 15px;
+  left: 15px;
+  right: 15px;
+  border: 2px dashed rgba(232, 185, 88, 0.7);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.75rem;
+}
+
+.guide-label-top {
+  background: rgba(42, 24, 36, 0.85);
+  color: #FFFFFF;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  align-self: flex-start;
+  border: 1px solid var(--color-brass);
+}
+
+.guide-label-bottom {
+  background: rgba(0, 0, 0, 0.75);
+  color: #E0DBD0;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+/* Mobile Stepper */
+.wizard-stepper {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--color-ledger-rule-dark);
+  padding-bottom: 0.75rem;
+  overflow-x: auto;
+}
+
+.wizard-step {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-charcoal-muted);
+  white-space: nowrap;
+  padding: 0.2rem 0.5rem;
+}
+
+.wizard-step.active {
+  color: var(--color-plum);
+  font-weight: 700;
+  border-bottom: 2px solid var(--color-brass);
+}
+
+.wizard-step.completed {
+  color: var(--color-green);
+}
+
+/* Mobile Floating Action Bar */
+@media (max-width: 768px) {
+  .masthead-container {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.25rem 0;
+  }
+  
+  .user-masthead-meta {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+  }
+  
+  .metric-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .ledger-main {
+    margin: 1rem auto;
+    padding: 0 0.75rem;
+  }
+  
+  .brand-logo-img {
+    height: 34px;
+    max-width: 40px;
+  }
+  
+  .login-logo-img {
+    height: 56px;
+    max-width: 65px;
+  }
+  
+  .landing-logo-img {
+    height: 64px;
+    max-width: 72px;
+  }
+  
+  .dossier-logo-img {
+    height: 50px;
+    max-width: 60px;
+  }
+}

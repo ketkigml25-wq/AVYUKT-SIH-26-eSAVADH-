@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Official Draft Legal Notice {{ notice.notice_ref_no }} | Version {{ notice.version_no or 1 }} | eSavadh</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body { background: #F8F5EE; padding: 2rem; }
+        .print-page { max-width: 800px; margin: 0 auto; background: #FFFFFF; border: 2px solid var(--color-plum); padding: 3rem; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .print-actions { max-width: 800px; margin: 0 auto 1.5rem auto; display: flex; justify-content: space-between; align-items: center; }
+        @media print {
+            body { background: #FFFFFF; padding: 0; }
+            .print-page { border: none; box-shadow: none; padding: 0; }
+            .print-actions { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-actions">
+        <a href="{{ url_for('inspection_detail', inspection_id=notice.inspection_id, step=4) }}" class="btn btn-outline">&larr; Back to Inspection Dossier</a>
+        <button onclick="window.print()" class="btn btn-primary">&#128438; Print / Save as PDF</button>
+    </div>
+
+    <div class="print-page">
+        <!-- Draft & Revision Prominent Banner -->
+        {% if notice.version_no and notice.version_no > 1 %}
+        <div style="background: #FFF8E6; border: 2px dashed #C88A2E; padding: 0.85rem 1.25rem; margin-bottom: 1.5rem; text-align: center;">
+            <div style="font-weight: 700; color: #8A5800; font-size: 1rem; text-transform: uppercase;">
+                &#9888; REVISED DRAFT — VERSION {{ notice.version_no }} &bull; SUBJECT TO AUTHORIZED REVIEW
+            </div>
+            <div style="font-size: 0.82rem; color: #5C4000; margin-top: 0.25rem;">
+                Original Formulated: <strong>{{ notice.created_at }}</strong> &bull; Last Edited: <strong>{{ notice.last_edited_at }}</strong> by <strong>{{ notice.editor_name or notice.officer_name }}</strong>
+            </div>
+            <div style="font-size: 0.8rem; color: #5C4000; margin-top: 0.25rem;">
+                <strong>Edit Reason:</strong> {{ notice.last_edit_reason or 'Statutory notice text revised.' }}
+            </div>
+        </div>
+        {% else %}
+        <div style="background: var(--color-red-light); border: 2px dashed var(--color-red); padding: 0.75rem 1rem; margin-bottom: 1.5rem; text-align: center;">
+            <div style="font-weight: 700; color: var(--color-red); font-size: 0.95rem; text-transform: uppercase;">
+                &#9888; DRAFT — SUBJECT TO AUTHORIZED SUPERVISORY REVIEW (VERSION 1)
+            </div>
+            <div style="font-size: 0.78rem; color: var(--color-red); margin-top: 0.2rem;">
+                This document is a formulated legal draft and does not constitute an automatically issued statutory notice.
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Official Header -->
+        <div style="text-align: center; border-bottom: 2px solid var(--color-plum); padding-bottom: 1.5rem; margin-bottom: 2rem;">
+            <img src="{{ url_for('static', filename='img/esavadh_logo.png') }}" alt="eSavadh Official Logo" class="dossier-logo-img">
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--color-plum); text-transform: uppercase;">
+                DIRECTORATE OF LEGAL METROLOGY
+            </div>
+            <div style="font-size: 0.85rem; color: var(--color-charcoal); margin-top: 0.25rem;">
+                Department of Consumer Affairs &bull; Government of India
+            </div>
+            <div style="font-size: 0.75rem; color: var(--color-charcoal-muted); margin-top: 0.2rem;">
+                Enforcement under Legal Metrology Act, 2009 & Legal Metrology (Packaged Commodities) Rules, 2011
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-bottom: 1.5rem; font-size: 0.9rem;">
+            <div>
+                <strong>Notice Ref No:</strong> {{ notice.notice_ref_no }} (v{{ notice.version_no or 1 }})<br>
+                <strong>Inspection Dossier:</strong> {{ notice.inspection_ref }}
+            </div>
+            <div style="text-align: right;">
+                <strong>Date Formulated:</strong> {{ notice.created_at }}<br>
+                <span class="status-badge" style="background: var(--color-red-light); color: var(--color-red); border-color: var(--color-red);">
+                    {% if notice.version_no and notice.version_no > 1 %}REVISED DRAFT NOTICE v{{ notice.version_no }}{% else %}DRAFT SHOW CAUSE NOTICE{% endif %}
+                </span>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 1.5rem; font-size: 0.95rem; line-height: 1.6;">
+            <strong>TO:</strong><br>
+            {{ notice.issued_to }}<br>
+            {{ notice.recipient_address or 'Principal Manufacturing / Packaging Premises' }}
+        </div>
+
+        <div style="background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark); padding: 1.5rem; font-family: monospace; font-size: 0.88rem; line-height: 1.6; white-space: pre-wrap; margin-bottom: 2rem;">{{ notice.draft_text }}</div>
+
+        <!-- Official Sign-off Block -->
+        <div style="display: flex; justify-content: space-between; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--color-ledger-rule-dark); font-size: 0.85rem;">
+            <div>
+                <strong>Formulated By:</strong><br>
+                {{ notice.officer_name }}<br>
+                {{ notice.officer_designation or 'Senior Legal Metrology Officer' }}<br>
+                {{ notice.officer_org or 'Enforcement Wing' }}
+            </div>
+            <div style="text-align: right;">
+                <strong>Supervisory Authorization:</strong><br>
+                <div style="margin-top: 2rem; border-top: 1px dashed var(--color-charcoal); display: inline-block; min-width: 180px; text-align: center; padding-top: 0.25rem;">
+                    Controller / Director Signature
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

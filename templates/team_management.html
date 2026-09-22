@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Team Management & Tasks - eSavadh{% endblock %}
+
+{% block content %}
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Enforcement Teams & Surveillance Directives</h2>
+            <p class="ledger-subtitle">Team coordination, zonal jurisdiction assignments, and officer workload</p>
+        </div>
+        <div class="ledger-meta-stamp">
+            ADMINISTRATIVE DISPATCH
+        </div>
+    </div>
+
+    <div class="ledger-body">
+        <!-- Teams List -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
+            {% for t in teams %}
+            <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1.25rem; border-top: 4px solid var(--color-plum);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h3 style="font-family: var(--font-serif); font-size: 1.15rem; color: var(--color-plum); font-weight: 700;">
+                            {{ t.name }}
+                        </h3>
+                        <div class="form-hint" style="margin-top: 0.2rem;">Jurisdiction: <strong>{{ t.jurisdiction }}</strong></div>
+                    </div>
+                    <span class="status-badge status-compliant">Active Unit</span>
+                </div>
+                <div style="margin-top: 1rem; font-size: 0.85rem; color: var(--color-charcoal);">
+                    <strong>Assigned Officers:</strong> Officer Rajesh Sharma, Officer Sunita Menon
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Task Allocation Register -->
+        <h3 style="font-family: var(--font-serif); font-size: 1.2rem; color: var(--color-plum); margin-bottom: 0.75rem;">
+            Active Surveillance Directives & Workload Roster
+        </h3>
+        <div class="ledger-table-wrapper" style="margin-bottom: 2rem;">
+            <table class="ledger-table">
+                <thead>
+                    <tr>
+                        <th>Task Directive</th>
+                        <th>Assigned Officer</th>
+                        <th>Priority</th>
+                        <th>Target Due Date</th>
+                        <th>Current Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                    <tr>
+                        <td>
+                            <strong>{{ task.title }}</strong>
+                            <p style="font-size: 0.8rem; color: var(--color-charcoal-muted); margin-top: 0.2rem;">
+                                {{ task.description }}
+                            </p>
+                        </td>
+                        <td>{{ task.assigned_to_name or 'Officer Rajesh Sharma' }}</td>
+                        <td>
+                            <span class="status-badge {% if task.priority == 'High' %}status-non-compliant{% else %}status-needs-review{% endif %}">
+                                {{ task.priority }}
+                            </span>
+                        </td>
+                        <td>{{ task.due_date or 'Immediate' }}</td>
+                        <td>
+                            <span class="status-badge status-compliant">{{ task.status }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Assign New Task Form -->
+        <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1.5rem; border-left: 4px solid var(--color-plum);">
+            <h3 style="font-family: var(--font-serif); font-size: 1.15rem; color: var(--color-plum); margin-bottom: 1rem;">
+                + Assign New Surveillance Directive
+            </h3>
+            <form method="POST" action="{{ url_for('create_team_task') }}">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label" for="task-title">Directive Title</label>
+                        <input type="text" id="task-title" name="title" class="form-control" placeholder="e.g. Audit of Packaged Spices USP Rule" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="task-assigned">Assign To Officer</label>
+                        <select id="task-assigned" name="assigned_to" class="form-control" required>
+                            {% for insp in inspectors %}
+                            <option value="{{ insp.id }}">{{ insp.name }} ({{ insp.organization }})</option>
+                            {% else %}
+                            <option value="2">Officer Rajesh Sharma (Enforcement Unit 01)</option>
+                            <option value="3">Officer Sunita Menon (South Zone Unit)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="task-priority">Priority Level</label>
+                        <select id="task-priority" name="priority" class="form-control">
+                            <option value="High">High (Immediate Surveillance)</option>
+                            <option value="Medium" selected>Medium (Standard Verification)</option>
+                            <option value="Low">Low (Routine Monitoring)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="task-date">Target Due Date</label>
+                        <input type="date" id="task-date" name="due_date" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label class="form-label" for="task-desc">Operational Instructions / Focus Rules</label>
+                    <textarea id="task-desc" name="description" class="form-control" rows="2" placeholder="Specific mandates to check (e.g. Rule 6(11) Unit Sale Price on packages >1kg in Connaught Place retail stores)..."></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn btn-primary" style="padding: 0.65rem 1.5rem;">
+                        &#10003; Issue & Dispatch Directive
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

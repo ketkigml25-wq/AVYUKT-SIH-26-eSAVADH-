@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Audit & Integrity Center - eSavadh{% endblock %}
+
+{% block content %}
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Anti-Corruption & Immutable Audit Registry</h2>
+            <p class="ledger-subtitle">Cryptographically verified action logs, report edit histories, and evidence chain-of-custody</p>
+        </div>
+        <div class="ledger-meta-stamp" style="background: var(--color-green-light); color: var(--color-green); border-color: var(--color-green);">
+            CHAIN-OF-CUSTODY VERIFIED
+        </div>
+    </div>
+
+    <div class="ledger-body">
+        <div class="demo-banner" style="border-left-color: var(--color-plum);">
+            <div>
+                <strong>&#128274; Statutory Integrity Assurance:</strong>
+                All user actions, OCR overrides, and dossier updates are recorded in an append-only ledger. No record can be silently rewritten or purged.
+            </div>
+        </div>
+
+        <div class="ledger-table-wrapper">
+            <table class="ledger-table">
+                <thead>
+                    <tr>
+                        <th>Log ID</th>
+                        <th>Timestamp (IST)</th>
+                        <th>User Identity</th>
+                        <th>Action Type</th>
+                        <th>Target Entity</th>
+                        <th>Audit Trace Details</th>
+                        <th>IP Origin</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td><code>#LOG-{{ "%04d"|format(log.id) }}</code></td>
+                        <td>{{ log.timestamp }}</td>
+                        <td><strong>{{ log.user_name or 'System Kernel' }}</strong></td>
+                        <td><span class="status-badge status-compliant">{{ log.action }}</span></td>
+                        <td>{{ log.entity_type }} #{{ log.entity_id }}</td>
+                        <td>{{ log.details }}</td>
+                        <td><code>{{ log.ip_address }}</code></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}

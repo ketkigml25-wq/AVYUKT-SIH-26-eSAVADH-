@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Inspector Dashboard - eSavadh{% endblock %}
+
+{% block content %}
+<!-- Metrics Summary Ledger -->
+<div class="metric-grid">
+    <div class="metric-card brass-top">
+        <div class="metric-label">OFFICER ASSIGNED</div>
+        <div class="metric-value" style="font-size: 1.25rem;">{{ user.name }}</div>
+        <div class="form-hint">Field Unit &bull; Jurisdiction A</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">TOTAL INSPECTIONS (TODAY)</div>
+        <div class="metric-value">0</div>
+        <div class="form-hint">Register log entries logged</div>
+    </div>
+    <div class="metric-card green-top">
+        <div class="metric-label">VERIFIED COMPLIANT</div>
+        <div class="metric-value">0</div>
+        <div class="form-hint">Mandatory declarations valid</div>
+    </div>
+    <div class="metric-card red-top">
+        <div class="metric-label">FLAGGED VIOLATIONS</div>
+        <div class="metric-value">0</div>
+        <div class="form-hint">Notice issuance pending</div>
+    </div>
+</div>
+
+<!-- Primary Register Workspace -->
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Field Inspection Register</h2>
+            <p class="ledger-subtitle">Active workbench for Legal Metrology Packaged Commodities Rule audits</p>
+        </div>
+        <div>
+            <a href="{{ url_for('new_inspection') }}" class="btn btn-accent">
+                + Begin New Inspection
+            </a>
+        </div>
+    </div>
+
+    <div class="ledger-body">
+        <div class="placeholder-notice">
+            <h3>Inspector Field Workbench Initialized</h3>
+            <p>Ready to verify packaged commodity declarations (MRP, Net Quantity, Date of Mfd, Manufacturer Details).</p>
+            <div style="margin-top: 1.25rem;">
+                <a href="{{ url_for('new_inspection') }}" class="btn btn-primary">Open Inspection Scanner</a>
+                <a href="{{ url_for('inspection_history') }}" class="btn btn-outline" style="margin-left: 0.5rem;">View Full Inspection Register</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

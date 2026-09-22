@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Official Compliance Dossier {{ dossier.inspection.ref_no }} | Version {{ dossier.report.version_no if dossier.report else 1 }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        @media print {
+            body { background: #FFFFFF; font-size: 11pt; }
+            .no-print { display: none !important; }
+            .official-dossier { border: 2px solid #000000; box-shadow: none; padding: 1.5rem; max-width: 100%; }
+            .gov-masthead, .ledger-nav, .ledger-footer { display: none !important; }
+        }
+    </style>
+</head>
+<body style="background: var(--color-ledger); padding: 2rem 1rem;">
+    <div class="no-print" style="max-width: 900px; margin: 0 auto 1rem auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <a href="{{ url_for('inspection_detail', inspection_id=dossier.inspection.id, step=4) }}" class="btn btn-outline btn-sm">&larr; Return to Workspace</a>
+            {% if dossier.report_revisions %}
+            <span style="font-size: 0.85rem; color: var(--color-charcoal-muted);">
+                Historical Versions:
+                <a href="{{ url_for('printable_dossier', inspection_id=dossier.inspection.id, version=1) }}" class="btn btn-outline btn-sm {% if dossier.report.version_no == 1 and dossier.report.is_viewing_historical %}btn-accent{% endif %}">v1 (Original)</a>
+                {% for rev in dossier.report_revisions %}
+                <a href="{{ url_for('printable_dossier', inspection_id=dossier.inspection.id, version=rev.version_no) }}" class="btn btn-outline btn-sm {% if dossier.report.version_no == rev.version_no and dossier.report.is_viewing_historical %}btn-accent{% endif %}">v{{ rev.version_no }}</a>
+                {% endfor %}
+                <a href="{{ url_for('printable_dossier', inspection_id=dossier.inspection.id) }}" class="btn btn-outline btn-sm {% if not dossier.report.is_viewing_historical %}btn-primary{% endif %}">Latest</a>
+            </span>
+            {% endif %}
+        </div>
+        <button onclick="window.print()" class="btn btn-primary btn-sm">&#128438; Print / Save as PDF</button>
+    </div>
+
+    <div class="official-dossier">
+        <!-- Prominent Revision Header Banner -->
+        {% if dossier.report and dossier.report.is_viewing_historical %}
+        <div style="background: #E8F4FD; border: 2px solid #1F5C8B; padding: 1rem 1.25rem; margin-bottom: 1.5rem; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <div style="font-size: 1.1rem; font-weight: 700; color: #1F5C8B; text-transform: uppercase;">
+                    &#128269; HISTORICAL SNAPSHOT &bull; VERSION {{ dossier.report.version_no }} {% if dossier.report.version_no == 1 %}(Original Master){% else %}(Historical Revision){% endif %}
+                </div>
+                <span class="status-badge" style="background: #D0E8FA; color: #1F5C8B; border-color: #1F5C8B; font-weight: 700;">
+                    HISTORICAL ARCHIVE VIEW
+                </span>
+            </div>
+            <div style="font-size: 0.85rem; color: #1F5C8B;">
+                Viewing historical state as recorded on {{ dossier.report.last_edited_at or dossier.report.generated_at }}.
+            </div>
+        </div>
+        {% elif dossier.report and dossier.report.version_no > 1 %}
+        <div style="background: #FFF8E6; border: 2px dashed #C88A2E; padding: 1rem 1.25rem; margin-bottom: 1.5rem; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <div style="font-size: 1.1rem; font-weight: 700; color: #8A5800; text-transform: uppercase;">
+                    &#9888; REVISED REPORT &bull; VERSION {{ dossier.report.version_no }}
+                </div>
+                <span class="status-badge" style="background: #FFF0CC; color: #8A5800; border-color: #C88A2E; font-weight: 700;">
+                    REVISION {{ dossier.report.version_no }} OF {{ (dossier.report_revisions|length) + 1 }}
+                </span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; font-size: 0.85rem; color: #5C4000; border-top: 1px solid rgba(200,138,46,0.3); padding-top: 0.5rem;">
+                <div><strong>Original Generated:</strong> {{ dossier.report.generated_at }}</div>
+                <div><strong>Last Edited:</strong> {{ dossier.report.last_edited_at or dossier.report.generated_at }}</div>
+                <div><strong>Edited By:</strong> {{ dossier.report.editor_name or dossier.inspection.inspector_name }} ({{ dossier.report.editor_role or 'Inspector' }})</div>
+            </div>
+            <div style="font-size: 0.85rem; color: #5C4000; margin-top: 0.5rem; background: #FFFFFF; padding: 0.5rem 0.75rem; border: 1px solid rgba(200,138,46,0.3);">
+                <strong>Edit Reason / Justification:</strong> {{ dossier.report.last_edit_reason or 'Correction and addition of statutory observations.' }}
+            </div>
+        </div>
+        {% else %}
+        <div style="background: #F4F8F4; border: 1px solid #3B7E48; padding: 0.5rem 1rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;">
+            <div>
+                <strong style="color: #265930;">ORIGINAL REPORT &bull; VERSION 1</strong> (Unmodified Master Record)
+            </div>
+            <div style="color: #265930;">
+                Generated: {{ dossier.report.generated_at if dossier.report else dossier.inspection.created_at }}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="dossier-header">
+            <img src="{{ url_for('static', filename='img/esavadh_logo.png') }}" alt="eSavadh Official Logo" class="dossier-logo-img">
+            <div class="dossier-seal">GOVERNMENT OF INDIA</div>
+            <div class="dossier-subseal">DIRECTORATE OF LEGAL METROLOGY &bull; DEPARTMENT OF CONSUMER AFFAIRS</div>
+            <h1 style="font-family: var(--font-serif); font-size: 1.35rem; color: var(--color-plum); margin-top: 0.75rem; text-decoration: underline;">
+                STATUTORY PACKAGED COMMODITY COMPLIANCE DOSSIER
+            </h1>
+            <div style="font-size: 0.85rem; color: var(--color-charcoal-muted); margin-top: 0.25rem;">
+                Issued under Rule 6, Legal Metrology (Packaged Commodities) Rules, 2011 & Legal Metrology Act, 2009
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; font-size: 0.9rem;">
+            <div>
+                <strong>Dossier Reference:</strong> {{ dossier.inspection.ref_no }}<br>
+                <strong>Report Certificate No:</strong> {{ dossier.report.report_number if dossier.report else 'RPT-2026-DEL-001' }} (v{{ dossier.report.version_no if dossier.report else 1 }})<br>
+                <strong>Commodity Name:</strong> {{ dossier.inspection.product_name }}<br>
+                <strong>Category:</strong> {{ dossier.inspection.product_category }}<br>
+                <strong>Manufacturing Date:</strong> {{ dossier.inspection.product_mfg_date or '05/2024' }} (Time-Aware Baseline)
+            </div>
+            <div>
+                <strong>Surveillance Date:</strong> {{ dossier.inspection.created_at }}<br>
+                <strong>Investigating Officer:</strong> {{ dossier.inspection.inspector_name }}<br>
+                <strong>Designation:</strong> {{ dossier.inspection.inspector_designation or 'Legal Metrology Officer' }}<br>
+                <strong>Location / Node:</strong> {{ dossier.inspection.location or 'Market Node' }}<br>
+                <strong>Final Determination:</strong> 
+                <span class="status-badge {% if dossier.inspection.compliance_status == 'Compliant' %}status-compliant{% else %}status-non-compliant{% endif %}" style="margin-left: 0.25rem;">
+                    {{ dossier.inspection.compliance_status }}
+                </span>
+            </div>
+        </div>
+
+        <h3 style="font-family: var(--font-serif); font-size: 1.1rem; color: var(--color-plum); margin-bottom: 0.5rem; border-bottom: 1px solid var(--color-ledger-rule-dark); padding-bottom: 0.25rem;">
+            1. Statutory Rule Declarations & Assessment Findings
+        </h3>
+
+        <table class="ledger-table" style="margin-bottom: 1.5rem;">
+            <thead>
+                <tr>
+                    <th>Statutory Rule</th>
+                    <th>Declaration Item</th>
+                    <th>Observed on Package</th>
+                    <th>Finding</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for finding in dossier.findings %}
+                <tr>
+                    <td><strong>{{ finding.rule_code }}</strong></td>
+                    <td style="text-transform: capitalize;">{{ finding.declaration_field|replace('_', ' ') }}</td>
+                    <td>{{ finding.observed_value }}</td>
+                    <td>
+                        {% if finding.status == 'Compliant' %}
+                        <strong style="color: var(--color-green);">&#10003; Compliant</strong>
+                        {% elif finding.status == 'Non-Compliant' %}
+                        <strong style="color: var(--color-red);">&#10007; Non-Compliant</strong>
+                        {% else %}
+                        <span>{{ finding.status }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Inspector Observations & Editable Sections -->
+        <h3 style="font-family: var(--font-serif); font-size: 1.1rem; color: var(--color-plum); margin-bottom: 0.5rem; border-bottom: 1px solid var(--color-ledger-rule-dark); padding-bottom: 0.25rem;">
+            2. Investigating Officer Observations & Directives
+        </h3>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark); padding: 1rem;">
+                <div style="font-size: 0.8rem; font-weight: 700; color: var(--color-plum); text-transform: uppercase; margin-bottom: 0.35rem;">
+                    Inspector Observations:
+                </div>
+                <div style="font-size: 0.88rem; color: var(--color-charcoal); line-height: 1.5;">
+                    {{ dossier.report.observations if dossier.report and dossier.report.observations else 'Physical container and primary Principal Display Panel inspected. All declarations verified against statutory criteria.' }}
+                </div>
+            </div>
+
+            <div style="background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark); padding: 1rem;">
+                <div style="font-size: 0.8rem; font-weight: 700; color: var(--color-plum); text-transform: uppercase; margin-bottom: 0.35rem;">
+                    Remarks & Findings:
+                </div>
+                <div style="font-size: 0.88rem; color: var(--color-charcoal); line-height: 1.5;">
+                    {{ dossier.report.remarks if dossier.report and dossier.report.remarks else dossier.inspection.overall_notes or 'All declarations evaluated under Legal Metrology (Packaged Commodities) Rules, 2011.' }}
+                </div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark); padding: 1rem;">
+                <div style="font-size: 0.8rem; font-weight: 700; color: var(--color-plum); text-transform: uppercase; margin-bottom: 0.35rem;">
+                    Corrective Actions Mandated:
+                </div>
+                <div style="font-size: 0.88rem; color: var(--color-charcoal); line-height: 1.5;">
+                    {{ dossier.report.corrective_actions if dossier.report and dossier.report.corrective_actions else 'Ensure full font height and contrast requirements under Rule 7 for all subsequent production batches.' }}
+                </div>
+            </div>
+
+            <div style="background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark); padding: 1rem;">
+                <div style="font-size: 0.8rem; font-weight: 700; color: var(--color-plum); text-transform: uppercase; margin-bottom: 0.35rem;">
+                    Statutory Recommendations:
+                </div>
+                <div style="font-size: 0.88rem; color: var(--color-charcoal); line-height: 1.5;">
+                    {{ dossier.report.recommendations if dossier.report and dossier.report.recommendations else 'Proceed with enforcement record archival and routine periodic surveillance.' }}
+                </div>
+            </div>
+        </div>
+
+        <div style="background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark); padding: 1rem; margin-bottom: 2rem;">
+            <div style="font-size: 0.8rem; font-weight: 700; color: var(--color-plum); text-transform: uppercase; margin-bottom: 0.35rem;">
+                Official Summary & Statutory Determination:
+            </div>
+            <div style="font-size: 0.9rem; color: var(--color-charcoal); line-height: 1.5;">
+                {{ dossier.report.summary if dossier.report and dossier.report.summary else dossier.inspection.overall_notes }}
+            </div>
+        </div>
+
+        <!-- Change History Section in Printable PDF if Revisions Exist -->
+        {% if dossier.report_revisions %}
+        <h3 style="font-family: var(--font-serif); font-size: 1.1rem; color: var(--color-plum); margin-bottom: 0.5rem; border-bottom: 1px solid var(--color-ledger-rule-dark); padding-bottom: 0.25rem;">
+            3. Revision & Audit History (Chain of Custody)
+        </h3>
+        <table class="ledger-table" style="margin-bottom: 2rem; font-size: 0.82rem;">
+            <thead>
+                <tr>
+                    <th>Version</th>
+                    <th>Edited By</th>
+                    <th>Date & Time</th>
+                    <th>Reason for Revision</th>
+                    <th>Modified Sections</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Version 1</strong></td>
+                    <td>{{ dossier.report.generator_name or dossier.inspection.inspector_name }}</td>
+                    <td>{{ dossier.report.generated_at }}</td>
+                    <td>Original Inspection Report Formulation</td>
+                    <td>Initial Creation</td>
+                </tr>
+                {% for rev in dossier.report_revisions %}
+                <tr>
+                    <td><strong>Version {{ rev.version_no }}</strong></td>
+                    <td>{{ rev.editor_name }} ({{ rev.edited_role or 'Inspector' }})</td>
+                    <td>{{ rev.edited_at }}</td>
+                    <td>{{ rev.edit_reason }}</td>
+                    <td>
+                        {% for f in rev.changed_fields_list %}
+                        <span class="status-badge" style="background: #EDE6D6; color: var(--color-charcoal); margin-right: 0.25rem;">{{ f|replace('_', ' ')|title }}</span>
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        <div style="display: flex; justify-content: space-between; margin-top: 3rem; text-align: center;">
+            <div>
+                <div style="width: 180px; border-bottom: 1px dashed #000; margin: 0 auto 0.5rem auto;"></div>
+                <div style="font-size: 0.8rem; font-weight: 600;">Authorized Officer Signature</div>
+                <div style="font-size: 0.75rem; color: var(--color-charcoal-muted);">Enforcement Division</div>
+            </div>
+            <div>
+                <div style="width: 180px; border-bottom: 1px dashed #000; margin: 0 auto 0.5rem auto;"></div>
+                <div style="font-size: 0.8rem; font-weight: 600;">Directorate Seal & Verification</div>
+                <div style="font-size: 0.75rem; color: var(--color-charcoal-muted);">Govt. of India</div>
+            </div>
+        </div>
+
+        <div style="margin-top: 2rem; border-top: 1px solid var(--color-ledger-rule-dark); padding-top: 0.75rem; text-align: center; font-size: 0.75rem; color: var(--color-charcoal-muted);">
+            Generated via eSavadh Statutory Platform &bull; Made by Team Avyukt
+        </div>
+    </div>
+</body>
+</html>

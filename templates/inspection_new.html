@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}New Compliance Inspection - eSavadh{% endblock %}
+
+{% block content %}
+<!-- Visual Operational Pipeline Header -->
+<div class="demo-banner" style="border-left-color: var(--color-plum); margin-bottom: 1.5rem; background: #FFFFFF;">
+    <div style="width: 100%;">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--color-plum); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.4rem;">
+            Statutory Verification Pipeline
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; font-size: 0.78rem; font-weight: 600; color: var(--color-charcoal);">
+            <span style="color: var(--color-brass);">&#128247; REAL PRODUCT IMAGE</span>
+            <span>&rarr;</span>
+            <span style="color: var(--color-cerulean);">&#10024; IMAGE ENHANCEMENT</span>
+            <span>&rarr;</span>
+            <span style="color: var(--color-plum);">&#128203; NATIVE OCR</span>
+            <span>&rarr;</span>
+            <span>&#128196; EXTRACTED TEXT</span>
+            <span>&rarr;</span>
+            <span>&#128214; RULE CHECK</span>
+            <span>&rarr;</span>
+            <span style="color: var(--color-green);">&#10003; COMPLIANCE RESULT</span>
+            <span>&rarr;</span>
+            <span style="color: var(--color-red);">&#128100; INSPECTOR VERIFICATION</span>
+        </div>
+    </div>
+</div>
+
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Initiate New Commodity Inspection Dossier</h2>
+            <p class="ledger-subtitle">Upload or photograph a real packaged commodity label to extract mandatory Legal Metrology declarations</p>
+        </div>
+        <div class="ledger-meta-stamp">
+            DOSSIER REF: <strong style="color: var(--color-plum);">{{ auto_ref_no }}</strong>
+        </div>
+    </div>
+
+    <div class="ledger-body">
+        <form id="inspection-form" method="POST" action="{{ url_for('create_inspection') }}" enctype="multipart/form-data">
+            <input type="hidden" name="ref_no" value="{{ auto_ref_no }}">
+
+            <!-- STEP 1: Basic Inspection & Location Information -->
+            <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1.25rem; margin-bottom: 1.5rem;">
+                <h3 style="font-family: var(--font-serif); font-size: 1.1rem; color: var(--color-plum); margin-bottom: 1rem;">
+                    1. Inspection Context & Identifiers
+                </h3>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label" for="location">Market / Store Location (Optional)</label>
+                        <input type="text" id="location" name="location" class="form-control" placeholder="e.g. Retail Store / Warehouse / Market" value="">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="product_name">Commodity / Brand Name (Optional)</label>
+                        <input type="text" id="product_name" name="product_name" class="form-control" placeholder="Leave blank to auto-detect from OCR..." value="">
+                        <div class="form-hint">Auto-detected from package image if left blank.</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="category">Commodity Category</label>
+                        <select id="category" name="category" class="form-control">
+                            <option value="Beverages / Food">Beverages / Food & Edibles</option>
+                            <option value="Edible Oils">Edible Oils & Fats</option>
+                            <option value="Cosmetics / Personal Care">Cosmetics & Personal Care</option>
+                            <option value="Grains & Cereals">Grains & Cereals</option>
+                            <option value="Consumer Goods">General Consumer Goods</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="mfg_date">Manufacturing / Packing Date (Optional)</label>
+                        <input type="text" id="mfg_date" name="mfg_date" class="form-control" placeholder="e.g. 05/2024 (Auto-detected from OCR if blank)" value="">
+                        <div class="form-hint">Time-aware baseline: auto-extracted from label if left blank.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2: Real Product Image Upload & Camera Feed -->
+            <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1.25rem; margin-bottom: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+                    <div>
+                        <h3 style="font-family: var(--font-serif); font-size: 1.1rem; color: var(--color-plum);">
+                            2. Real Product Package Photograph
+                        </h3>
+                        <p style="font-size: 0.8rem; color: var(--color-charcoal-muted);">
+                            Select the principal side (Front, Back, Lateral) containing declarations (MRP, Net Qty, Mfg Date, Address).
+                        </p>
+                    </div>
+                    <div style="font-size: 0.8rem; font-weight: 600; color: var(--color-plum);" id="active-side-label">
+                        Front Panel
+                    </div>
+                </div>
+
+                <!-- Multi-side Selector Chips -->
+                <div class="side-selector-container">
+                    <button type="button" class="side-chip active" data-side="Front" onclick="cameraScanner.selectSide('Front')">&#128247; Front Panel</button>
+                    <button type="button" class="side-chip recommended" data-side="Back" onclick="cameraScanner.selectSide('Back')">&#10024; Back Panel (Mandatory)</button>
+                    <button type="button" class="side-chip" data-side="Right" onclick="cameraScanner.selectSide('Right')">Right Lateral</button>
+                    <button type="button" class="side-chip" data-side="Left" onclick="cameraScanner.selectSide('Left')">Left Lateral</button>
+                    <button type="button" class="side-chip" data-side="Top" onclick="cameraScanner.selectSide('Top')">Top Flap / Cap</button>
+                    <button type="button" class="side-chip" data-side="Bottom" onclick="cameraScanner.selectSide('Bottom')">Bottom Base</button>
+                </div>
+                <input type="hidden" id="selected-side-input" name="view_side" value="Front">
+
+                <!-- Upload Drop Zone & Real-Time Preview -->
+                <div style="border: 2px dashed var(--color-ledger-rule-dark); background: var(--color-ledger); padding: 1.5rem; text-align: center; margin-bottom: 1rem;" id="drop-zone">
+                    <div id="upload-prompt-view">
+                        <div style="font-size: 2.2rem; color: var(--color-brass); margin-bottom: 0.5rem;">&#128247;</div>
+                        <div style="font-weight: 700; color: var(--color-plum); font-size: 1rem; margin-bottom: 0.25rem;">
+                            Upload Real Product Image or Use Camera
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--color-charcoal-muted); margin-bottom: 1rem;">
+                            Supports JPG, PNG, WEBP (Clear, well-lit photograph of packaging label)
+                        </p>
+                        
+                        <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
+                            <label class="btn btn-primary" style="cursor: pointer;">
+                                &#128194; Choose Image File
+                                <input type="file" id="package_image" name="package_image" accept="image/*" style="display: none;" onchange="handleFileSelected(this)">
+                            </label>
+                            <button type="button" class="btn btn-outline" onclick="toggleCamera()">
+                                &#128248; Use Live Camera
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Live Camera Feed (Initially Hidden) -->
+                    <div id="camera-container" style="display: none; margin-top: 1rem;">
+                        <div class="camera-viewfinder" style="max-width: 600px; margin: 0 auto 1rem auto;">
+                            <video id="camera-video" class="camera-video" autoplay playsinline muted></video>
+                            <div class="viewfinder-guide-overlay">
+                                <div class="guide-label-top">ALIGN MANDATORY DECLARATIONS</div>
+                                <div class="guide-label-bottom">Ensure adequate lighting & focus on text</div>
+                            </div>
+                            <canvas id="capture-canvas" style="display: none;"></canvas>
+                        </div>
+                        <div style="display: flex; justify-content: center; gap: 0.5rem;">
+                            <button type="button" class="btn btn-accent" onclick="captureFromCamera()">
+                                &#128248; Snap Frame & Attach
+                            </button>
+                            <button type="button" class="btn btn-outline" onclick="toggleCamera()">
+                                Cancel Camera
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Instant Preview Box (Appears immediately after selecting an image) -->
+                    <div id="preview-container" style="display: none; margin-top: 1rem; text-align: left; background: #FFFFFF; border: 1px solid var(--color-green); padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span class="status-badge status-compliant">&#10003; Image Attached</span>
+                                <strong id="preview-filename" style="color: var(--color-plum); font-size: 0.9rem;">filename.jpg</strong>
+                                <span id="preview-filesize" class="form-hint" style="margin: 0;">(0 KB)</span>
+                            </div>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="clearSelectedImage()">
+                                &times; Remove / Choose Another
+                            </button>
+                        </div>
+
+                        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                            <div style="max-width: 180px; max-height: 180px; border: 1px solid var(--color-ledger-rule-dark); overflow: hidden; background: #000;">
+                                <img id="preview-image" src="" alt="Selected Product Image Preview" style="max-width: 100%; max-height: 180px; object-fit: contain; display: block; margin: 0 auto;">
+                            </div>
+                            <div style="flex: 1; min-width: 240px; font-size: 0.85rem; color: var(--color-charcoal);">
+                                <div style="color: var(--color-green); font-weight: 700; margin-bottom: 0.25rem;">
+                                    &#10004; File validated & confirmed for Dossier {{ auto_ref_no }}
+                                </div>
+                                <p style="color: var(--color-charcoal-muted); line-height: 1.5;">
+                                    Upon clicking <strong>Run Real OCR</strong>, the backend will perform real pixel-level optical character recognition on this exact image.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <a href="{{ url_for('dashboard_router') }}" class="btn btn-outline">
+                    &larr; Cancel
+                </a>
+                <button type="submit" id="submit-btn" class="btn btn-accent" style="padding: 0.8rem 2rem; font-size: 1rem;">
+                    &#9654; Run Image Enhancement & Real OCR Analysis &rarr;
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let cameraActive = false;
+
+function validateInspectionForm() {
+    const fileInput = document.getElementById("package_image");
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        if (window.showToast) {
+            window.showToast("Please choose an image file or snap a photo with your camera before submitting.", "error");
+        } else {
+            alert("Please choose an image file or snap a photo with your camera before submitting.");
+        }
+        const dropZone = document.getElementById("drop-zone");
+        if (dropZone) {
+            dropZone.style.border = "2px dashed var(--color-red)";
+            dropZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return false;
+    }
+    
+    const submitBtn = document.getElementById("submit-btn");
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = "&#9203; Processing Real Image with Native Windows OCR...";
+    }
+    return true;
+}
+
+// Attach onsubmit
+document.getElementById("inspection-form").onsubmit = validateInspectionForm;
+
+function handleFileSelected(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            document.getElementById("preview-image").src = e.target.result;
+            document.getElementById("preview-filename").innerText = file.name;
+            document.getElementById("preview-filesize").innerText = `(${(file.size / 1024).toFixed(1)} KB)`;
+            document.getElementById("preview-container").style.display = "block";
+            document.getElementById("upload-prompt-view").style.display = "none";
+            
+            const dropZone = document.getElementById("drop-zone");
+            if (dropZone) dropZone.style.border = "2px dashed var(--color-green)";
+            
+            if (window.showToast) {
+                window.showToast(`Real image attached: ${file.name}`, "success");
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function clearSelectedImage() {
+    const fileInput = document.getElementById("package_image");
+    fileInput.value = "";
+    document.getElementById("preview-container").style.display = "none";
+    document.getElementById("upload-prompt-view").style.display = "block";
+    const dropZone = document.getElementById("drop-zone");
+    if (dropZone) dropZone.style.border = "2px dashed var(--color-ledger-rule-dark)";
+}
+
+function toggleCamera() {
+    const container = document.getElementById("camera-container");
+    const promptView = document.getElementById("upload-prompt-view");
+    
+    if (!cameraActive) {
+        container.style.display = "block";
+        promptView.style.display = "none";
+        cameraScanner.initCamera();
+        cameraActive = true;
+    } else {
+        container.style.display = "none";
+        promptView.style.display = "block";
+        cameraScanner.stopCamera();
+        cameraActive = false;
+    }
+}
+
+function captureFromCamera() {
+    const dataUrl = cameraScanner.captureCurrentFrame();
+    if (dataUrl) {
+        fetch(dataUrl)
+            .then(res => res.blob())
+            .then(blob => {
+                const file = new File([blob], `camera_capture_${Date.now()}.jpg`, { type: "image/jpeg" });
+                const container = new DataTransfer();
+                container.items.add(file);
+                document.getElementById("package_image").files = container.files;
+                
+                // Show preview
+                document.getElementById("preview-image").src = dataUrl;
+                document.getElementById("preview-filename").innerText = file.name;
+                document.getElementById("preview-filesize").innerText = `(${(file.size / 1024).toFixed(1)} KB)`;
+                document.getElementById("preview-container").style.display = "block";
+                
+                // Stop camera
+                toggleCamera();
+                if (window.showToast) {
+                    window.showToast("Camera photograph captured and attached to dossier.", "success");
+                }
+            });
+    }
+}
+</script>
+{% endblock %}

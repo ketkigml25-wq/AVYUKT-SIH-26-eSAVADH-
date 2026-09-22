@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Manufacturer Compliance Hub - eSavadh{% endblock %}
+
+{% block content %}
+<div class="metric-grid">
+    <div class="metric-card brass-top">
+        <div class="metric-label">MANUFACTURER ENTITY</div>
+        <div class="metric-value" style="font-size: 1.25rem;">{{ user.organization or user.name }}</div>
+        <div class="form-hint">Packaging Unit Compliance ID #MFR-{{ user.id }}</div>
+    </div>
+    <div class="metric-card green-top">
+        <div class="metric-label">REGISTERED COMMODITIES</div>
+        <div class="metric-value">4</div>
+        <div class="form-hint">SKUs on National Central Register</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-label">AUDITED BATCHES</div>
+        <div class="metric-value">{{ inspections|length }}</div>
+        <div class="form-hint">Market surveillance samples verified</div>
+    </div>
+</div>
+
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Packaging Compliance Audits & Pre-Market Records</h2>
+            <p class="ledger-subtitle">Surveillance results on Principal Display Panels (Rule 6, PCR 2011)</p>
+        </div>
+        <div class="ledger-meta-stamp">
+            MANUFACTURER REGULATORY CELL
+        </div>
+    </div>
+    <div class="ledger-body">
+        <div class="ledger-table-wrapper">
+            <table class="ledger-table">
+                <thead>
+                    <tr>
+                        <th>Dossier Ref</th>
+                        <th>Commodity & Barcode</th>
+                        <th>Surveillance Date</th>
+                        <th>Compliance Determination</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for insp in inspections %}
+                    <tr>
+                        <td><strong>{{ insp.ref_no }}</strong></td>
+                        <td>{{ insp.product_name or 'Packaged Commodity' }}</td>
+                        <td>{{ insp.created_at }}</td>
+                        <td>
+                            {% if insp.compliance_status == 'Compliant' %}
+                            <span class="status-badge status-compliant">&#10003; Certified Compliant</span>
+                            {% else %}
+                            <span class="status-badge status-non-compliant">&#10007; Non-Compliance Flagged</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('inspection_detail', inspection_id=insp.id) }}" class="btn btn-outline btn-sm">
+                                View Technical Findings
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: var(--color-charcoal-muted); padding: 2rem;">
+                            No market surveillance inspections found for your manufacturing licenses.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% endblock %}

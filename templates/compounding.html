@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Section 48 Compounding Settlement - eSavadh{% endblock %}
+
+{% block content %}
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Section 48 Compounding & Composition of Offenses</h2>
+            <p class="ledger-subtitle">Statutory settlement calculation under Legal Metrology Act, 2009</p>
+        </div>
+        <div class="ledger-meta-stamp">
+            STATUTORY COMPOSITION WORKFLOW
+        </div>
+    </div>
+
+    <div class="ledger-body">
+        <div class="metric-grid">
+            <div class="metric-card brass-top">
+                <div class="metric-label">OFFENSE CLASSIFICATION</div>
+                <div class="metric-value" style="font-size: 1.15rem;">{{ fee_calc.offense_clause }}</div>
+                <div class="form-hint">Rule 6 read with Section 36(1)</div>
+            </div>
+            <div class="metric-card cerulean-top">
+                <div class="metric-label">BASE STATUTORY PENALTY</div>
+                <div class="metric-value">₹ {{ "{:,.2f}".format(fee_calc.base_fee) }}</div>
+                <div class="form-hint">First offense baseline</div>
+            </div>
+            <div class="metric-card red-top">
+                <div class="metric-label">CALCULATED COMPOSITION SUM</div>
+                <div class="metric-value">₹ {{ "{:,.2f}".format(fee_calc.calculated_amount) }}</div>
+                <div class="form-hint">Under Section 48 guidelines</div>
+            </div>
+        </div>
+
+        <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1.5rem; margin-bottom: 1.5rem;">
+            <h3 style="font-family: var(--font-serif); font-size: 1.15rem; color: var(--color-plum); margin-bottom: 0.5rem;">
+                Compounding Eligibility & Legal Provisions
+            </h3>
+            <p style="font-size: 0.9rem; color: var(--color-charcoal); line-height: 1.6; margin-bottom: 1rem;">
+                <strong>{{ fee_calc.eligibility }}</strong><br>
+                {{ fee_calc.statutory_note }}
+            </p>
+
+            <form method="POST" action="{{ url_for('submit_compounding_order', inspection_id=inspection.id) }}" onsubmit="const b=this.querySelector('button[type=submit]'); if(b){b.disabled=true; b.innerText='Formulating Settlement Order...';}">
+                <input type="hidden" name="proposed_fee" value="{{ fee_calc.calculated_amount }}">
+                <input type="hidden" name="offense_section" value="{{ fee_calc.offense_clause }}">
+
+                <div class="form-group">
+                    <label class="form-label">Compounding Order Notes / Mitigation Reasons</label>
+                    <textarea class="form-control" name="audit_note" rows="3" placeholder="State reasons for compounding acceptance (e.g. 'First-time inadvertent labeling omission; undertaking submitted by manufacturer')...">First-time inadvertent omission of secondary consumer care helpline. Manufacturer submitted written undertaking to recall batch and rectify labeling within 30 days.</textarea>
+                </div>
+
+                <div class="form-group" style="background: #F9F6F0; border: 1px solid var(--color-ledger-rule-dark); padding: 0.75rem;">
+                    <label class="form-label" style="font-weight: 600;">Reason for Formulation / Revision (Recorded in Immutable Audit Trail)</label>
+                    <input type="text" class="form-control" name="edit_reason" placeholder="e.g. Initial composition proposal / Recomputed penalty under Section 48 guidelines" value="Section 48 compounding settlement proposal formulated.">
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                    <a href="{{ url_for('inspection_detail', inspection_id=inspection.id, step=4) }}" class="btn btn-outline">&larr; Return to Dossier (Step 4)</a>
+                    <button type="submit" class="btn btn-accent">
+                        &#10003; Formulate / Save Compounding Settlement Proposal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}eSavadh - Intelligent Legal Metrology Compliance Platform{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="ledger-section" style="border-top: 5px solid var(--color-brass); background: #FFFFFF;">
+    <div style="padding: 3rem 2rem; text-align: center; max-width: 960px; margin: 0 auto;">
+        <img src="{{ url_for('static', filename='img/esavadh_logo.png') }}" alt="eSavadh Logo" class="landing-logo-img">
+        <h1 style="font-family: var(--font-serif); font-size: 2.5rem; color: var(--color-plum); font-weight: 700; margin-bottom: 0.5rem;">
+            eSavadh &bull; ई-सावध
+        </h1>
+        <h2 style="font-size: 1.15rem; color: var(--color-brass); font-weight: 600; letter-spacing: 0.5px; margin-bottom: 1rem;">
+            Intelligent Packaged Commodity Compliance & Inspection Platform
+        </h2>
+        <p style="font-size: 1.1rem; color: var(--color-charcoal-muted); font-style: italic; margin-bottom: 1.5rem;">
+            "Scan. Verify. Assess. Document."
+        </p>
+        <p style="font-size: 0.95rem; line-height: 1.7; color: var(--color-charcoal); max-width: 800px; margin: 0 auto 2rem auto;">
+            A unified, mobile-first compliance verification platform built under the statutory framework of the 
+            <strong>Legal Metrology Act, 2009</strong> and the <strong>Legal Metrology (Packaged Commodities) Rules, 2011</strong>. 
+            Empowers enforcement authorities, field inspectors, retailers, and manufacturers to inspect physical packaged goods 
+            and e-commerce listings with time-aware legal precision.
+        </p>
+        
+        <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+            <a href="{{ url_for('login') }}" class="btn btn-primary" style="padding: 0.75rem 1.75rem; font-size: 1rem;">
+                Official Sign In Portal &rarr;
+            </a>
+            <a href="{{ url_for('how_it_works') }}" class="btn btn-outline" style="padding: 0.75rem 1.5rem;">
+                Explore 9-Step Workflow Guide
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Key Pillars Ledger Grid -->
+<div class="metric-grid">
+    <div class="metric-card brass-top">
+        <div class="metric-label">TIME-AWARE COMPLIANCE</div>
+        <div class="metric-value" style="font-size: 1.2rem;">Retroactive Rules</div>
+        <p style="font-size: 0.8rem; color: var(--color-charcoal-muted); margin-top: 0.5rem;">
+            Matches the product's manufacturing date against historical rule versions. Never penalizes legacy packaging with newly enacted amendments.
+        </p>
+    </div>
+    <div class="metric-card cerulean-top">
+        <div class="metric-label">INTELLIGENT OCR & VISION</div>
+        <div class="metric-value" style="font-size: 1.2rem;">Multi-side & Enhance</div>
+        <p style="font-size: 0.8rem; color: var(--color-charcoal-muted); margin-top: 0.5rem;">
+            Captures Front, Back, and lateral sides with adaptive auto-contrast, unsharp mask enhancement, and English + Hindi declaration parsing.
+        </p>
+    </div>
+    <div class="metric-card green-top">
+        <div class="metric-label">HUMAN-IN-THE-LOOP</div>
+        <div class="metric-value" style="font-size: 1.2rem;">Inspector Decision</div>
+        <p style="font-size: 0.8rem; color: var(--color-charcoal-muted); margin-top: 0.5rem;">
+            AI assists with intelligent value suggestions, but authorized inspectors retain mandatory Confirm / Deny verification authority.
+        </p>
+    </div>
+    <div class="metric-card red-top">
+        <div class="metric-label">E-COMMERCE SURVEILLANCE</div>
+        <div class="metric-value" style="font-size: 1.2rem;">Digital Monitoring</div>
+        <p style="font-size: 0.8rem; color: var(--color-charcoal-muted); margin-top: 0.5rem;">
+            Section 46 module verifies online marketplace listings via URL / screenshot using the same unified Legal Metrology pipeline.
+        </p>
+    </div>
+</div>
+
+<!-- Workflow Section -->
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">End-to-End Compliance Pipeline</h2>
+            <p class="ledger-subtitle">Unified verification flow from physical label to official evidence-backed dossier</p>
+        </div>
+        <div class="ledger-meta-stamp">
+            STATUTORY ENFORCEMENT ENGINE
+        </div>
+    </div>
+    <div class="ledger-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; text-align: center;">
+            <div style="padding: 1rem; background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark);">
+                <div style="font-weight: 700; color: var(--color-plum); font-size: 1rem;">1. Capture</div>
+                <div style="font-size: 0.75rem; color: var(--color-charcoal-muted); margin-top: 0.35rem;">Mobile camera & multi-side guidance</div>
+            </div>
+            <div style="padding: 1rem; background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark);">
+                <div style="font-weight: 700; color: var(--color-plum); font-size: 1rem;">2. Enhance & OCR</div>
+                <div style="font-size: 0.75rem; color: var(--color-charcoal-muted); margin-top: 0.35rem;">Contrast boost & text extraction</div>
+            </div>
+            <div style="padding: 1rem; background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark);">
+                <div style="font-weight: 700; color: var(--color-plum); font-size: 1rem;">3. Rule Check</div>
+                <div style="font-size: 0.75rem; color: var(--color-charcoal-muted); margin-top: 0.35rem;">Time-aware rule version matching</div>
+            </div>
+            <div style="padding: 1rem; background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark);">
+                <div style="font-weight: 700; color: var(--color-plum); font-size: 1rem;">4. HITL Review</div>
+                <div style="font-size: 0.75rem; color: var(--color-charcoal-muted); margin-top: 0.35rem;">Officer Confirm/Deny suggestions</div>
+            </div>
+            <div style="padding: 1rem; background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark);">
+                <div style="font-weight: 700; color: var(--color-plum); font-size: 1rem;">5. Legal Report</div>
+                <div style="font-size: 0.75rem; color: var(--color-charcoal-muted); margin-top: 0.35rem;">Draft notice & audit logging</div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

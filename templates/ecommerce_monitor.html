@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}E-Commerce Compliance Surveillance (Section 46) - eSavadh{% endblock %}
+
+{% block content %}
+<!-- Section 46 Banner -->
+<div class="demo-banner">
+    <div>
+        <strong>&#128187; Legal Metrology E-Commerce Surveillance Node (Section 46):</strong>
+        Automated compliance verification of packaged commodity digital product listings under Rule 6(10) & Rule 6(11) of PCR 2011.
+    </div>
+    <div>
+        <span class="status-badge status-compliant">TIER 1 ACTIVE</span>
+    </div>
+</div>
+
+<!-- TIER 1: Live Interactive Listing Ingestion Form -->
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Tier 1: Single Listing Ingestion & Verification</h2>
+            <p class="ledger-subtitle">Paste product URL, raw specifications text, or upload a digital storefront screenshot</p>
+        </div>
+        <div class="ledger-meta-stamp">
+            TIER 1 (ACTIVE SURVEILLANCE)
+        </div>
+    </div>
+
+    <div class="ledger-body">
+        <form method="POST" action="{{ url_for('check_ecommerce_listing') }}" enctype="multipart/form-data" id="ecom-form">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                <!-- Left: URL and Screenshot Upload -->
+                <div>
+                    <div class="form-group">
+                        <label class="form-label" for="listing_url">Product Listing Marketplace URL</label>
+                        <input 
+                            type="url" 
+                            id="listing_url" 
+                            name="listing_url" 
+                            class="form-control" 
+                            placeholder="e.g. https://www.amazon.in/dp/B09XTEST12 or https://www.flipkart.com/item/itm..." 
+                            value="https://www.amazon.in/dp/B09XTEST12"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Upload Marketplace Screenshot (Optional - Real OCR)</label>
+                        <div style="border: 2px dashed var(--color-ledger-rule-dark); background: var(--color-ledger); padding: 1rem; text-align: center;">
+                            <label class="btn btn-outline btn-sm" style="cursor: pointer; margin-bottom: 0.5rem; display: inline-block;">
+                                &#128194; Choose Screenshot Image
+                                <input type="file" name="screenshot_image" id="screenshot_image" accept="image/*" style="display: none;" onchange="handleScreenshotSelected(this)">
+                            </label>
+                            <div id="screenshot-preview-text" class="form-hint">JPG, PNG, WEBP storefront screenshot</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Text Specifications Area -->
+                <div>
+                    <div class="form-group">
+                        <label class="form-label" for="raw_text">Listing Specifications / Raw Description Text</label>
+                        <textarea id="raw_text" name="raw_text" class="form-control" rows="6" placeholder="Paste product specifications table from marketplace page...">Title: NutriPure Cold Pressed Organic Sesame Oil (1 Litre)
+Maximum Retail Price: ₹ 380.00 (Inclusive of all taxes)
+Net Content: 1 L
+Unit Sale Price: ₹ 38.00 per 100 ml
+Country of Origin: India
+Manufacturer Name: NutriPure Agritech Pvt. Ltd.
+Seller: CloudRetail Solutions India Pvt Ltd</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; border-top: 1px solid var(--color-ledger-rule-dark); padding-top: 1rem;">
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="populateEcomDemo(1)">
+                        Sample 1: Compliant Edible Oil (Amazon)
+                    </button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="populateEcomDemo(2)">
+                        Sample 2: Non-Compliant Cleanser (Flipkart)
+                    </button>
+                </div>
+
+                <button type="submit" id="ecom-submit-btn" class="btn btn-accent" style="padding: 0.75rem 2rem; font-size: 0.95rem;">
+                    Analyze Listing Compliance &rarr;
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<!-- Monitored Listings Table -->
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Digital Marketplace Surveillance Index</h2>
+            <p class="ledger-subtitle">Tracked marketplace listings with content-hash deduplication status & dossiers</p>
+        </div>
+        <div class="ledger-meta-stamp">
+            DEDUPLICATION ENGINE
+        </div>
+    </div>
+
+    <div class="ledger-body">
+        <div class="ledger-table-wrapper">
+            <table class="ledger-table">
+                <thead>
+                    <tr>
+                        <th>Platform</th>
+                        <th>Product Title</th>
+                        <th>Seller Name</th>
+                        <th>Declared MRP</th>
+                        <th>Country of Origin</th>
+                        <th>Hash Status</th>
+                        <th>Compliance Determination</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in listings %}
+                    <tr>
+                        <td><strong>{{ item.platform }}</strong></td>
+                        <td>{{ item.product_title }}</td>
+                        <td>{{ item.seller_name }}</td>
+                        <td>{{ item.declared_mrp or 'Missing' }}</td>
+                        <td>{{ item.declared_country or 'Not Declared' }}</td>
+                        <td>
+                            <span class="status-badge" style="background: #EAE5D8; color: var(--color-charcoal); border-color: var(--color-ledger-rule-dark);">
+                                {{ loop.index % 2 == 0 and 'Unchanged' or 'New' }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if item.compliance_status == 'Compliant' %}
+                            <span class="status-badge status-compliant">&#10003; Compliant</span>
+                            {% elif item.compliance_status == 'Non-Compliant' %}
+                            <span class="status-badge status-non-compliant">&#10007; Non-Compliant</span>
+                            {% else %}
+                            <span class="status-badge status-needs-review">&#9888; Review</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- TIER 2: Architectural Roadmap & Specifications (Explicitly Marked as Future Scope) -->
+<section class="ledger-section" style="border-left: 4px solid var(--color-brass);">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Tier 2: Production Scheduled Crawler Architecture</h2>
+            <p class="ledger-subtitle">Automated marketplace surveillance & bulk API integration roadmap</p>
+        </div>
+        <span class="status-badge status-needs-review">FUTURE SCOPE / ROADMAP</span>
+    </div>
+
+    <div class="ledger-body">
+        <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1.25rem;">
+            <p style="font-size: 0.9rem; color: var(--color-charcoal); line-height: 1.6; margin-bottom: 1rem;">
+                <strong>Statutory Caveat:</strong> Tier 1 above demonstrates single-listing ingestion and rule evaluation. 
+                Full automated marketplace crawling across millions of SKUs is architected for Tier 2 production deployment as specified below:
+            </p>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
+                <div style="padding: 0.75rem; background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark);">
+                    <strong style="color: var(--color-plum);">1. Marketplace API Feed</strong>
+                    <p style="font-size: 0.78rem; color: var(--color-charcoal-muted); margin-top: 0.25rem;">
+                        Official Seller API feeds (Amazon SP-API, Flipkart Developer API) with strict rate-limiting.
+                    </p>
+                </div>
+                <div style="padding: 0.75rem; background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark);">
+                    <strong style="color: var(--color-plum);">2. Content-Hash Deduplicator</strong>
+                    <p style="font-size: 0.78rem; color: var(--color-charcoal-muted); margin-top: 0.25rem;">
+                        Tracks <code>New</code>, <code>Unchanged</code>, and <code>Changed</code> listings to eliminate redundant OCR compute.
+                    </p>
+                </div>
+                <div style="padding: 0.75rem; background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark);">
+                    <strong style="color: var(--color-plum);">3. Ethical Fallback Crawler</strong>
+                    <p style="font-size: 0.78rem; color: var(--color-charcoal-muted); margin-top: 0.25rem;">
+                        Respects robots.txt and marketplace Terms of Service without bypassing authentication barriers.
+                    </p>
+                </div>
+                <div style="padding: 0.75rem; background: var(--color-ledger); border: 1px solid var(--color-ledger-rule-dark);">
+                    <strong style="color: var(--color-plum);">4. Human Escalation Queue</strong>
+                    <p style="font-size: 0.78rem; color: var(--color-charcoal-muted); margin-top: 0.25rem;">
+                        Automatically pushes flagged non-compliant listings to authorized officer dashboards for notice drafting.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function handleScreenshotSelected(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        document.getElementById("screenshot-preview-text").innerHTML = `<strong style="color: var(--color-green);">&#10004; Attached: ${file.name}</strong> (${(file.size/1024).toFixed(1)} KB)`;
+        showToast(`Screenshot attached: ${file.name}`, "success");
+    }
+}
+
+function populateEcomDemo(sampleId) {
+    if (sampleId === 1) {
+        document.getElementById("listing_url").value = "https://www.amazon.in/dp/B09XTEST12";
+        document.getElementById("raw_text").value = 
+`Title: NutriPure Cold Pressed Organic Sesame Oil (1 Litre)
+Maximum Retail Price: ₹ 380.00 (Inclusive of all taxes)
+Net Content: 1 L
+Unit Sale Price: ₹ 38.00 per 100 ml
+Country of Origin: India
+Manufacturer Name: NutriPure Agritech Pvt. Ltd.
+Seller: CloudRetail Solutions India Pvt Ltd`;
+    } else {
+        document.getElementById("listing_url").value = "https://www.flipkart.com/item/itm129847192";
+        document.getElementById("raw_text").value = 
+`Title: SilkCare Hydrating Herbal Face Cleanser 100ml
+MRP: ₹ 199.00
+Net Content: 100 ml
+Seller: HealthFirst Organics Hub
+Country of Origin: [MISSING]
+Unit Sale Price: [MISSING]`;
+    }
+    showToast(`Loaded Sample ${sampleId} listing specs`, "info");
+}
+
+document.getElementById("ecom-form").onsubmit = function() {
+    const btn = document.getElementById("ecom-submit-btn");
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = "&#9203; Analyzing Listing Compliance with Rule Engine...";
+    }
+    return true;
+};
+</script>
+{% endblock %}

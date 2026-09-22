@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}eSavadh{% endblock %} | Intelligent Legal Metrology Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+</head>
+<body>
+    <div class="app-wrapper">
+        <!-- Top Official Government Masthead -->
+        <header class="gov-masthead">
+            <div class="masthead-container">
+                <a href="{% if session.get('user') %}{{ url_for('dashboard_router') }}{% else %}{{ url_for('landing') }}{% endif %}" class="masthead-brand">
+                    <img src="{{ url_for('static', filename='img/esavadh_logo.png') }}" alt="eSavadh Logo" class="brand-logo-img">
+                    <div class="brand-details">
+                        <h1>eSavadh &bull; ई-सावध</h1>
+                        <p>INTELLIGENT PACKAGED COMMODITY COMPLIANCE & INSPECTION &bull; GOVT OF INDIA</p>
+                    </div>
+                </a>
+
+                {% if session.get('user') %}
+                <div class="user-masthead-meta">
+                    <!-- Offline / Online Sync Indicator -->
+                    <div class="sync-status-indicator" id="sync-status-container" title="Local offline storage & synchronization status">
+                        <span class="sync-dot" id="sync-status-dot"></span>
+                        <span id="sync-status-text">Online & Synced</span>
+                    </div>
+
+                    <div class="user-identity" style="text-align: right; font-size: 0.825rem;">
+                        <strong style="color: #FFFFFF;">{{ session['user']['name'] }}</strong>
+                        <div>
+                            <span class="role-badge">{{ session['user']['role'] }}</span>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('logout') }}" class="logout-link">Sign Out</a>
+                </div>
+                {% else %}
+                <div>
+                    <a href="{{ url_for('login') }}" class="btn btn-accent btn-sm">Official Sign In</a>
+                </div>
+                {% endif %}
+            </div>
+        </header>
+
+        {% if session.get('user') %}
+        <!-- Role-Aware Primary Navigation -->
+        <nav class="ledger-nav">
+            <div class="nav-container">
+                <a href="{{ url_for('dashboard_router') }}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                    <span>&#9638;</span> Dashboard
+                </a>
+                
+                <a href="{{ url_for('new_inspection') }}" class="nav-item {% if active_page == 'new_inspection' %}active{% endif %}">
+                    <span>&#9998;</span> New Inspection
+                </a>
+                <a href="{{ url_for('inspections_list') }}" class="nav-item {% if active_page == 'inspections' %}active{% endif %}">
+                    <span>&#128196;</span> Inspections
+                </a>
+                <a href="{{ url_for('ecommerce_monitor') }}" class="nav-item {% if active_page == 'ecommerce' %}active{% endif %}">
+                    <span>&#128187;</span> E-Commerce Monitoring
+                </a>
+
+                <a href="{{ url_for('rules_center') }}" class="nav-item {% if active_page == 'rules' %}active{% endif %}">
+                    <span>&#128214;</span> Rules & Lookup
+                </a>
+
+                <a href="{{ url_for('reports_center') }}" class="nav-item {% if active_page == 'reports' %}active{% endif %}">
+                    <span>&#128202;</span> Reports
+                </a>
+
+                {% if session['user']['role'] == 'Admin' %}
+                <a href="{{ url_for('team_management') }}" class="nav-item {% if active_page == 'teams' %}active{% endif %}">
+                    <span>&#128101;</span> Teams & Tasks
+                </a>
+                <a href="{{ url_for('audit_integrity') }}" class="nav-item {% if active_page == 'audit' %}active{% endif %}">
+                    <span>&#128274;</span> Audit & Integrity
+                </a>
+                {% endif %}
+
+                <a href="{{ url_for('how_it_works') }}" class="nav-item {% if active_page == 'how_it_works' %}active{% endif %}">
+                    <span>&#10067;</span> How It Works
+                </a>
+            </div>
+        </nav>
+        {% endif %}
+
+        <!-- Main Body Area -->
+        <main class="ledger-main">
+            <!-- Global Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Official Footer -->
+        <footer class="ledger-footer">
+            <div class="footer-container">
+                <div>
+                    <strong>eSavadh</strong> &bull; Standards of Weights and Measures Enforcement Platform
+                    <div style="font-size: 0.725rem; color: var(--color-charcoal-light); margin-top: 0.2rem;">
+                        Legal Metrology Act, 2009 &bull; Legal Metrology (Packaged Commodities) Rules, 2011
+                    </div>
+                </div>
+                <div>
+                    <span class="footer-credit">Made by Team Avyukt</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Client Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/offline_sync.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/camera.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

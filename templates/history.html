@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Inspection History - eSavadh{% endblock %}
+
+{% block content %}
+<section class="ledger-section">
+    <div class="ledger-header">
+        <div>
+            <h2 class="ledger-title">Master Inspection Register & History</h2>
+            <p class="ledger-subtitle">Chronological ledger of commodity inspections, OCR transcripts, and compliance determinations</p>
+        </div>
+        <div>
+            <a href="{{ url_for('new_inspection') }}" class="btn btn-accent btn-sm">+ New Inspection</a>
+        </div>
+    </div>
+
+    <div class="ledger-body">
+        <div class="ledger-table-wrapper" style="margin-bottom: 1.5rem;">
+            <table class="ledger-table">
+                <thead>
+                    <tr>
+                        <th>Inspection ID</th>
+                        <th>Timestamp</th>
+                        <th>Product / Barcode</th>
+                        <th>Inspector</th>
+                        <th>Compliance Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--color-charcoal-muted); padding: 2rem;">
+                            <em>No inspection records logged in ledger yet. Start an inspection to generate compliance records.</em>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="placeholder-notice">
+            <h3>Archival and Search Index</h3>
+            <p>Filter by barcode, date range, compliance violations, or issuing inspector in upcoming modules.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}
