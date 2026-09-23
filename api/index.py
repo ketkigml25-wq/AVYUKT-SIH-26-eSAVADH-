@@ -15,31 +15,44 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 class VercelPathFixMiddleware:
     """
     Middleware ensuring that Vercel's serverless function path rewrites
-    (/api/index.py, /api/index, /api -> /) correctly map to Flask's internal routing table.
+    (/api/index.py, /api/index, /api -> /) correctly map to Flask's internal routing table,
+    extracting the true requested URI from Vercel proxy headers.
     """
     def __init__(self, wsgi_app):
         self.wsgi_app = wsgi_app
 
     def __call__(self, environ, start_response):
-        path_info = environ.get("PATH_INFO", "")
-        
+        # Retrieve the original client requested URI
+        raw_path = (
+            environ.get("HTTP_X_FORWARDED_URI") or
+            environ.get("HTTP_X_MATCHED_PATH") or
+            environ.get("RAW_URI") or
+            environ.get("REQUEST_URI") or
+            environ.get("PATH_INFO") or
+            "/"
+        )
+
+        # Strip query parameters if present
+        if "?" in raw_path:
+            raw_path = raw_path.split("?", 1)[0]
+
+        # Strip serverless entrypoint prefixes
         prefixes = [
             "/api/index.py",
             "/api/index",
             "/api/app.py",
-            "/api/app",
-            "/api"
+            "/api/app"
         ]
-        
+
         for p in prefixes:
-            if path_info == p:
-                path_info = "/"
+            if raw_path == p:
+                raw_path = "/"
                 break
-            elif path_info.startswith(p + "/"):
-                path_info = path_info[len(p):]
+            elif raw_path.startswith(p + "/"):
+                raw_path = raw_path[len(p):]
                 break
-                
-        environ["PATH_INFO"] = path_info if path_info else "/"
+
+        environ["PATH_INFO"] = raw_path if raw_path else "/"
         return self.wsgi_app(environ, start_response)
 
 app.wsgi_app = VercelPathFixMiddleware(app.wsgi_app)
@@ -49,4 +62,3 @@ app = app
 
 if __name__ == "__main__":
     app.run()
-
