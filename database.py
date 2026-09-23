@@ -415,6 +415,45 @@ def get_inspections(limit=50, role_filter=None, user_id=None, source_filter=None
         conn.close()
 
 
+def make_compact_dossier_snapshot(dossier):
+    """Creates a lightweight (<1KB) snapshot of essential dossier fields to safely fit in browser session cookie."""
+    if not dossier or not isinstance(dossier, dict):
+        return None
+    insp = dossier.get("inspection", {})
+    decls = [
+        {
+            "id": d.get("id"),
+            "field_name": d.get("field_name"),
+            "extracted_value": d.get("extracted_value"),
+            "confirmed_value": d.get("confirmed_value"),
+            "confidence": d.get("confidence", 0.9),
+            "suggested_value": d.get("suggested_value"),
+            "suggestion_reason": d.get("suggestion_reason"),
+            "inspector_status": d.get("inspector_status", "Unreviewed"),
+            "source_view": d.get("source_view", "Front")
+        }
+        for d in dossier.get("declarations", [])
+    ]
+    return {
+        "inspection": {
+            "id": insp.get("id"),
+            "ref_no": insp.get("ref_no"),
+            "product_id": insp.get("product_id"),
+            "product_name": insp.get("product_name"),
+            "product_category": insp.get("product_category"),
+            "product_mfg_date": insp.get("product_mfg_date"),
+            "product_brand": insp.get("product_brand"),
+            "product_manufacturer": insp.get("product_manufacturer"),
+            "product_country_of_origin": insp.get("product_country_of_origin"),
+            "compliance_status": insp.get("compliance_status"),
+            "inspector_id": insp.get("inspector_id"),
+            "location": insp.get("location"),
+            "overall_notes": insp.get("overall_notes")
+        },
+        "declarations": decls
+    }
+
+
 def _restore_dossier_to_db(dossier, conn):
     """Restores a session-cached dossier into the local database instance if missing."""
     if not dossier or not isinstance(dossier, dict):
@@ -552,7 +591,8 @@ def get_inspection_detail(inspection_id_or_ref, version_override=None):
         if not insp:
             return None
 
-        actual_id = insp["id"]
+        insp_dict = dict(insp)
+        actual_id = insp_dict["id"]
         images = [dict(img) for img in conn.execute("SELECT * FROM inspection_images WHERE inspection_id = ? ORDER BY id ASC", (actual_id,)).fetchall()]
         decls = [dict(d) for d in conn.execute("SELECT * FROM declarations WHERE inspection_id = ? ORDER BY id ASC", (actual_id,)).fetchall()]
         findings = [dict(cf) for cf in conn.execute("""
@@ -576,11 +616,11 @@ def get_inspection_detail(inspection_id_or_ref, version_override=None):
         
         if not report_row:
             report_num = f"RPT-2026-DEL-{actual_id:04d}"
-            prod_title = insp.get("product_name") or "Packaged Commodity"
+            prod_title = insp_dict.get("product_name") or "Packaged Commodity"
             title = f"Statutory Compliance Certificate - {prod_title}"
-            summary = insp.get("overall_notes") or f"Statutory surveillance dossier {insp.get('ref_no')}. Determination: {insp.get('compliance_status')}."
-            status = insp.get("compliance_status") or "Needs Review"
-            gen_by = insp.get("inspector_id") or 1
+            summary = insp_dict.get("overall_notes") or f"Statutory surveillance dossier {insp_dict.get('ref_no')}."
+            status = insp_dict.get("compliance_status") or "Needs Review"
+            gen_by = insp_dict.get("inspector_id") or 1
             
             conn.execute("""
                 INSERT OR IGNORE INTO reports (inspection_id, report_number, title, summary, observations, remarks, corrective_actions, recommendations, final_status, generated_by, version_no, is_revised)

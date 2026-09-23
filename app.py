@@ -499,12 +499,13 @@ def create_inspection():
     finally:
         conn.close()
 
-    # Save dossier snapshot in session for cross-container serverless persistence
+    # Save compact dossier snapshot in session for cross-container serverless persistence (<1KB)
     try:
         dossier_snapshot = database.get_inspection_detail(inspection_id)
         if dossier_snapshot:
-            session[f"dossier_{inspection_id}"] = dossier_snapshot
-            session["active_dossier"] = dossier_snapshot
+            compact_snap = database.make_compact_dossier_snapshot(dossier_snapshot)
+            session[f"dossier_{inspection_id}"] = compact_snap
+            session["active_dossier"] = compact_snap
             session["active_inspection_id"] = inspection_id
     except Exception as e:
         print(f"[eSavadh Session] Snapshot notice: {e}")
@@ -712,12 +713,13 @@ def reevaluate_inspection_compliance(inspection_id):
     finally:
         conn.close()
 
-    # Update session snapshot
+    # Update compact session snapshot
     try:
         updated_dossier = database.get_inspection_detail(inspection_id)
         if updated_dossier:
-            session[f"dossier_{inspection_id}"] = updated_dossier
-            session["active_dossier"] = updated_dossier
+            compact_snap = database.make_compact_dossier_snapshot(updated_dossier)
+            session[f"dossier_{inspection_id}"] = compact_snap
+            session["active_dossier"] = compact_snap
     except Exception as e:
         print(f"[eSavadh Session] Snapshot update notice: {e}")
 
