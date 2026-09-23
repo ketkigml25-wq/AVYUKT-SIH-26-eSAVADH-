@@ -450,7 +450,18 @@ def make_compact_dossier_snapshot(dossier):
             "location": insp.get("location"),
             "overall_notes": insp.get("overall_notes")
         },
-        "declarations": decls
+        "declarations": decls,
+        "images": [
+            {
+                "id": img.get("id"),
+                "view_side": img.get("view_side", "Front"),
+                "original_image_path": img.get("original_image_path"),
+                "enhanced_image_path": img.get("enhanced_image_path"),
+                "quality_score": img.get("quality_score", 90),
+                "is_enhanced": img.get("is_enhanced", 1)
+            }
+            for img in dossier.get("images", [])
+        ]
     }
 
 

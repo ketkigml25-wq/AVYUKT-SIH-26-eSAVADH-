@@ -514,6 +514,138 @@ def create_inspection():
     return redirect(url_for("inspection_detail", inspection_id=inspection_id))
 
 
+@app.route("/inspection/<int:inspection_id>/upload-side", methods=["POST"])
+@app.route("/inspection/<inspection_id>/upload-side", methods=["POST"])
+@app.route("/api/inspection/<int:inspection_id>/upload-side", methods=["POST"])
+@app.route("/api/inspection/<inspection_id>/upload-side", methods=["POST"])
+@login_required
+@role_required(["Inspector", "Admin"])
+def upload_additional_side(inspection_id):
+    dossier = database.get_inspection_detail(inspection_id)
+    if not dossier:
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "error": "Inspection not found"}), 404
+        flash("Inspection dossier not found.", "error")
+        return redirect(url_for("inspections_list"))
+
+    actual_id = dossier["inspection"]["id"]
+    view_side = request.form.get("view_side", "Back")
+    file = request.files.get("package_image")
+
+    if not file or file.filename == "":
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "error": "Please select a valid image file"}), 400
+        flash("Please upload a valid package photograph.", "error")
+        return redirect(url_for("inspection_detail", inspection_id=actual_id, step=1))
+
+    fname = secure_filename(file.filename)
+    timestamped_name = f"{int(time.time())}_{fname}"
+    abs_orig_path = os.path.join(app.config["UPLOAD_FOLDER"], timestamped_name)
+    file.save(abs_orig_path)
+    image_rel_path = f"uploads/original/{timestamped_name}"
+
+    # Quality enhancement
+    enhanced_rel_path, enh_summary, quality_score = enhance_evidence_image(abs_orig_path, timestamped_name)
+
+    # Run OCR on this specific panel
+    ocr_data = perform_ocr_extraction(abs_orig_path, side_hint=view_side)
+    decls = ocr_data["declarations"]
+    raw_ocr_text = ocr_data.get("raw_text", "").strip()
+
+    conn = database.get_db()
+    try:
+        cursor = conn.cursor()
+
+        # Insert new inspection image record WITHOUT deleting any existing images
+        cursor.execute(
+            """
+            INSERT INTO inspection_images (inspection_id, view_side, original_image_path, enhanced_image_path, quality_score, is_enhanced)
+            VALUES (?, ?, ?, ?, ?, 1)
+            """,
+            (actual_id, view_side, image_rel_path, enhanced_rel_path, quality_score)
+        )
+        new_image_id = cursor.lastrowid
+
+        # Insert OCR result for this image
+        if raw_ocr_text:
+            cursor.execute(
+                """
+                INSERT INTO ocr_results (inspection_id, image_id, raw_text, detected_languages, confidence_score)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (actual_id, new_image_id, raw_ocr_text, ocr_data.get("detected_languages", "English"), ocr_data.get("overall_confidence", 0.0))
+            )
+
+        # Merge extracted declarations into existing declarations
+        existing_decls = cursor.execute("SELECT id, field_name, extracted_value, confirmed_value, inspector_status FROM declarations WHERE inspection_id = ?", (actual_id,)).fetchall()
+        existing_map = {d["field_name"]: d for d in existing_decls}
+
+        new_extracted_count = 0
+        for field, d in decls.items():
+            if d.get("extracted_value"):
+                if field in existing_map:
+                    ex = existing_map[field]
+                    if not ex["extracted_value"] or ex["inspector_status"] == "Unreviewed":
+                        cursor.execute(
+                            """
+                            UPDATE declarations
+                            SET extracted_value = ?, confidence = ?, suggested_value = ?, suggestion_reason = ?, confirmed_value = COALESCE(confirmed_value, ?), source_view = ?
+                            WHERE id = ?
+                            """,
+                            (
+                                d["extracted_value"], d["confidence"], d["suggested_value"],
+                                d["suggestion_reason"], d["suggested_value"] or d["extracted_value"],
+                                f"{view_side} Panel", ex["id"]
+                            )
+                        )
+                        new_extracted_count += 1
+                else:
+                    cursor.execute(
+                        """
+                        INSERT INTO declarations (inspection_id, field_name, extracted_value, confidence, suggested_value, suggestion_reason, inspector_status, confirmed_value, source_view)
+                        VALUES (?, ?, ?, ?, ?, ?, 'Unreviewed', ?, ?)
+                        """,
+                        (
+                            actual_id, field, d["extracted_value"], d["confidence"],
+                            d["suggested_value"], d["suggestion_reason"],
+                            d["suggested_value"] or d["extracted_value"], f"{view_side} Panel"
+                        )
+                    )
+                    new_extracted_count += 1
+
+        cursor.execute(
+            "INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address) VALUES (?, 'ADD_SIDE_IMAGE', 'InspectionImage', ?, ?, ?)",
+            (session["user"]["id"], new_image_id, f"Officer uploaded {view_side} panel image. Extracted {new_extracted_count} declaration(s).", request.remote_addr)
+        )
+
+        conn.commit()
+    finally:
+        conn.close()
+
+    # Update session snapshot
+    try:
+        updated_dossier = database.get_inspection_detail(actual_id)
+        if updated_dossier:
+            compact_snap = database.make_compact_dossier_snapshot(updated_dossier)
+            session[f"dossier_{actual_id}"] = compact_snap
+            session[f"dossier_{inspection_id}"] = compact_snap
+            session["active_dossier"] = compact_snap
+    except Exception as e:
+        print(f"[eSavadh Session] Snapshot notice: {e}")
+
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({
+            "success": True,
+            "message": f"Successfully added {view_side} panel image to dossier.",
+            "image_id": new_image_id,
+            "view_side": view_side,
+            "extracted_count": new_extracted_count
+        })
+
+    flash(f"Successfully added {view_side} panel photograph to dossier. Discovered {new_extracted_count} declaration(s).", "success")
+    return redirect(url_for("inspection_detail", inspection_id=actual_id, step=1))
+
+
 @app.route("/inspections")
 @login_required
 def inspections_list():

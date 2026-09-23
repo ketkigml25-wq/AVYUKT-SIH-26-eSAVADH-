@@ -91,15 +91,15 @@
             </div>
 
             <!-- Evidence Gallery -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;" id="evidence-gallery-grid">
                 {% for img in dossier.images %}
-                <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1rem;">
+                <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1rem;" id="evidence-card-{{ img.id }}">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                         <strong>{{ img.view_side }} Panel Evidence</strong>
                         <span class="status-badge status-compliant">Quality Score: {{ img.quality_score }}%</span>
                     </div>
                     <div style="text-align: center; background: #000000; padding: 0.5rem; margin-bottom: 0.5rem;">
-                        <img src="{{ url_for('static', filename=img.original_image_path) }}" alt="Evidence Image" style="max-width: 100%; max-height: 240px; object-fit: contain;">
+                        <img src="{{ url_for('static', filename=img.original_image_path) }}" alt="{{ img.view_side }} Evidence" style="max-width: 100%; max-height: 240px; object-fit: contain;">
                     </div>
                     <div class="form-hint">
                         {% if img.is_enhanced %}
@@ -115,6 +115,45 @@
                     <p>Evidence images and enhanced Principal Display Panel copies will appear here.</p>
                 </div>
                 {% endfor %}
+            </div>
+
+            <!-- Multi-Side Scan & Upload Additional Panel Section -->
+            <div style="background: #FFFFFF; border: 1px solid var(--color-ledger-rule-dark); padding: 1.25rem; margin-bottom: 1.5rem; border-left: 4px solid var(--color-brass);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <h4 style="font-family: var(--font-serif); color: var(--color-plum); margin: 0; font-size: 1rem;">
+                            &#128247; Scan / Upload Additional Package Panel (Multi-Side Evidence)
+                        </h4>
+                        <div style="font-size: 0.8rem; color: var(--color-charcoal-muted); margin-top: 0.2rem;">
+                            Upload additional sides (Back, Right, Left, Top, Bottom) to capture missing declarations without replacing existing photos.
+                        </div>
+                    </div>
+                </div>
+
+                <form method="POST" action="{{ url_for('upload_additional_side', inspection_id=dossier.inspection.id) }}" enctype="multipart/form-data" id="add-side-form" style="margin-top: 0.75rem;">
+                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                        <div style="min-width: 180px;">
+                            <label class="form-label" style="font-size: 0.8rem; margin-bottom: 0.25rem;">Select Package Side:</label>
+                            <select name="view_side" id="add-view-side" class="form-control" style="padding: 0.45rem 0.75rem; font-size: 0.85rem;">
+                                <option value="Back">Back Panel (Mandatory Declarations)</option>
+                                <option value="Right">Right Lateral Panel</option>
+                                <option value="Left">Left Lateral Panel</option>
+                                <option value="Top">Top Flap / Cap</option>
+                                <option value="Bottom">Bottom Base</option>
+                                <option value="Front">Front Principal Display Panel</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 220px;">
+                            <label class="form-label" style="font-size: 0.8rem; margin-bottom: 0.25rem;">Choose Panel Image:</label>
+                            <input type="file" name="package_image" id="add-package-image" accept="image/*" class="form-control" style="padding: 0.35rem 0.5rem; font-size: 0.85rem;" required>
+                        </div>
+                        <div style="margin-top: 1.25rem;">
+                            <button type="submit" id="add-side-btn" class="btn btn-primary" style="padding: 0.55rem 1.25rem; font-size: 0.85rem;">
+                                &#10010; Add Panel & Run OCR
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
 
             <!-- Raw OCR Transcript Box -->
