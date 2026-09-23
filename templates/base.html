@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}eSavadh{% endblock %} | Intelligent Legal Metrology Platform</title>
+    <meta name="theme-color" content="#0F2A4A">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
 </head>
@@ -122,6 +124,15 @@
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script src="{{ url_for('static', filename='js/offline_sync.js') }}"></script>
     <script src="{{ url_for('static', filename='js/camera.js') }}"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(reg => console.log('[eSavadh PWA] Service Worker registered with scope:', reg.scope))
+                    .catch(err => console.warn('[eSavadh PWA] Service Worker registration notice:', err));
+            });
+        }
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

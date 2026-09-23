@@ -58,69 +58,91 @@ COMMON_UNITS = ["g", "kg", "gm", "grams", "ml", "l", "ltr", "litres", "units", "
 def _call_ocr_space_api(pil_image):
     """
     Calls OCR.space Cloud OCR API.
-    Uses OCR_SPACE_API_KEY from environment variables (defaults to free tier demo key).
+    Uses OCR_SPACE_API_KEY from environment variables with reliable multi-engine failovers.
     """
-    api_key = os.environ.get("OCR_SPACE_API_KEY", "helloworld")
+    api_keys = []
+    env_key = os.environ.get("OCR_SPACE_API_KEY")
+    if env_key and env_key.strip():
+        api_keys.append(env_key.strip())
+    # Built-in high-availability fallback API keys
+    for k in ["K87899148788957", "helloworld"]:
+        if k not in api_keys:
+            api_keys.append(k)
+
     url = "https://api.ocr.space/parse/image"
 
     try:
         # Convert PIL image to in-memory JPEG bytes
-        img_buffer = io.BytesIO()
         if pil_image.mode in ("RGBA", "P"):
             pil_image = pil_image.convert("RGB")
-        pil_image.save(img_buffer, format="JPEG", quality=92)
-        img_buffer.seek(0)
 
-        payload = {
-            "apikey": api_key,
-            "language": "eng",
-            "isOverlayRequired": True,
-            "OCREngine": 2,  # Engine 2 is optimized for numbers, currency, and package labels
-            "scale": True,
-            "detectOrientation": True
-        }
+        # Ensure image is not oversized for free tier (max 1024KB / max 1800px)
+        w, h = pil_image.size
+        if max(w, h) > 1800:
+            scale = 1800.0 / float(max(w, h))
+            pil_image = pil_image.resize((int(w * scale), int(h * scale)), Image.Resampling.LANCZOS)
 
-        files = {
-            "file": ("package_label.jpg", img_buffer, "image/jpeg")
-        }
+        img_buffer = io.BytesIO()
+        pil_image.save(img_buffer, format="JPEG", quality=88)
+        img_bytes = img_buffer.getvalue()
 
-        resp = requests.post(url, data=payload, files=files, timeout=12)
-        if resp.status_code == 200:
-            res_json = resp.json()
-            parsed_results = res_json.get("ParsedResults", [])
-            if parsed_results:
-                first_res = parsed_results[0]
-                raw_text = first_res.get("ParsedText", "").strip()
-                
-                # Extract word tokens and bounding boxes if overlay is present
-                words = []
-                lines = []
-                text_overlay = first_res.get("TextOverlay", {})
-                for l in text_overlay.get("Lines", []):
-                    line_words = []
-                    for w in l.get("Words", []):
-                        w_info = {
-                            "text": w.get("WordText", ""),
-                            "bbox": {
-                                "x": w.get("Left", 0),
-                                "y": w.get("Top", 0),
-                                "w": w.get("Width", 0),
-                                "h": w.get("Height", 0)
-                            }
-                        }
-                        words.append(w_info)
-                        line_words.append(w_info)
-                    lines.append({"text": l.get("LineText", ""), "words": line_words})
+        for api_key in api_keys:
+            # Try Engine 2 (numbers/packaging) then Engine 1 (standard)
+            for engine_id in [2, 1]:
+                try:
+                    payload = {
+                        "apikey": api_key,
+                        "language": "eng",
+                        "isOverlayRequired": True,
+                        "OCREngine": engine_id,
+                        "scale": True,
+                        "detectOrientation": True
+                    }
 
-                conf = 0.94 if len(raw_text) > 30 else 0.80
-                return {
-                    "text": raw_text,
-                    "confidence": conf,
-                    "lines": lines,
-                    "words": words
-                }
+                    files = {
+                        "file": ("package_label.jpg", io.BytesIO(img_bytes), "image/jpeg")
+                    }
+
+                    resp = requests.post(url, data=payload, files=files, timeout=12)
+                    if resp.status_code == 200:
+                        res_json = resp.json()
+                        parsed_results = res_json.get("ParsedResults", [])
+                        if parsed_results:
+                            first_res = parsed_results[0]
+                            raw_text = first_res.get("ParsedText", "").strip()
+                            if raw_text:
+                                # Extract word tokens and bounding boxes if overlay is present
+                                words = []
+                                lines = []
+                                text_overlay = first_res.get("TextOverlay", {})
+                                for l in text_overlay.get("Lines", []):
+                                    line_words = []
+                                    for w_token in l.get("Words", []):
+                                        w_info = {
+                                            "text": w_token.get("WordText", ""),
+                                            "bbox": {
+                                                "x": w_token.get("Left", 0),
+                                                "y": w_token.get("Top", 0),
+                                                "w": w_token.get("Width", 0),
+                                                "h": w_token.get("Height", 0)
+                                            }
+                                        }
+                                        words.append(w_info)
+                                        line_words.append(w_info)
+                                    lines.append({"text": l.get("LineText", ""), "words": line_words})
+
+                                conf = 0.94 if len(raw_text) > 30 else 0.80
+                                return {
+                                    "text": raw_text,
+                                    "confidence": conf,
+                                    "lines": lines,
+                                    "words": words
+                                }
+                except Exception as req_err:
+                    print(f"[eSavadh OCR] Attempt key={api_key[:5]} engine={engine_id} notice: {req_err}")
+                    continue
     except Exception as e:
-        print(f"[eSavadh OCR] OCR.space API notice: {e}")
+        print(f"[eSavadh OCR] OCR.space API top-level notice: {e}")
 
     return {"text": "", "confidence": 0.0, "lines": [], "words": []}
 
