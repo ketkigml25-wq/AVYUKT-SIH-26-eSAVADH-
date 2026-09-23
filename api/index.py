@@ -8,15 +8,12 @@ if root_dir not in sys.path:
     sys.path.insert(0, root_dir)
 
 from app import app
-from werkzeug.middleware.proxy_fix import ProxyFix
-
-# Apply ProxyFix for client IP and protocol without modifying prefix
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 class VercelPathFixMiddleware:
     """
     Middleware ensuring that Vercel's serverless function path rewrites
-    (/api/index.py?__v_path=... -> actual route) correctly map to Flask's internal routing table.
+    (/api/index.py?__v_path=... -> actual route) correctly map to Flask's internal routing table,
+    preserving exact HTTP methods and query parameters.
     """
     def __init__(self, wsgi_app):
         self.wsgi_app = wsgi_app
@@ -45,7 +42,7 @@ class VercelPathFixMiddleware:
                 raw_path = raw_path.split("?", 1)[0]
             real_path = raw_path
 
-        # Strip any remaining serverless entrypoint prefixes
+        # Strip any serverless entrypoint prefixes
         prefixes = [
             "/api/index.py",
             "/api/index",
@@ -68,8 +65,10 @@ class VercelPathFixMiddleware:
             real_path = "/" + real_path
 
         environ["PATH_INFO"] = real_path
+        environ["SCRIPT_NAME"] = ""
         return self.wsgi_app(environ, start_response)
 
+# Apply VercelPathFixMiddleware directly to Flask WSGI app
 app.wsgi_app = VercelPathFixMiddleware(app.wsgi_app)
 
 # Export application for Vercel Serverless Function entry
