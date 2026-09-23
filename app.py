@@ -107,6 +107,11 @@ def role_required(allowed_roles):
 # ============================================================================
 
 @app.route("/")
+@app.route("/landing")
+@app.route("/api")
+@app.route("/api/")
+@app.route("/api/index")
+@app.route("/api/index.py")
 def index():
     if "user" in session:
         return redirect(url_for("dashboard_router"))
@@ -1182,6 +1187,14 @@ def audit_integrity():
     finally:
         conn.close()
     return render_template("audit_integrity.html", logs=logs, active_page="audit")
+
+
+@app.errorhandler(404)
+def page_not_found(e):
+    if "user" in session:
+        flash("The requested compliance resource was not found. Redirected to dashboard.", "info")
+        return redirect(url_for("dashboard_router"))
+    return render_template("landing.html"), 200
 
 
 # ============================================================================
