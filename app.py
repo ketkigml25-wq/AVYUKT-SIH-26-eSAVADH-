@@ -132,6 +132,22 @@ def how_it_works():
 # Authentication Routes
 # ============================================================================
 
+@app.route("/debug-request", methods=["GET", "POST"])
+def debug_request():
+    return jsonify({
+        "method": request.method,
+        "path": request.path,
+        "url": request.url,
+        "path_info": request.environ.get("PATH_INFO"),
+        "query_string": request.environ.get("QUERY_STRING"),
+        "raw_uri": request.environ.get("RAW_URI"),
+        "request_uri": request.environ.get("REQUEST_URI"),
+        "x_matched_path": request.environ.get("HTTP_X_MATCHED_PATH"),
+        "x_forwarded_uri": request.environ.get("HTTP_X_FORWARDED_URI"),
+        "x_vercel_id": request.environ.get("HTTP_X_VERCEL_ID")
+    })
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
