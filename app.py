@@ -534,6 +534,7 @@ def inspections_list():
 
 
 @app.route("/inspection/<int:inspection_id>")
+@app.route("/inspection/<inspection_id>")
 @login_required
 def inspection_detail(inspection_id):
     dossier = database.get_inspection_detail(inspection_id)
@@ -544,6 +545,7 @@ def inspection_detail(inspection_id):
 
 
 @app.route("/inspection/<int:inspection_id>/print")
+@app.route("/inspection/<inspection_id>/print")
 @login_required
 def printable_dossier(inspection_id):
     version_param = request.args.get("version")
@@ -559,6 +561,7 @@ def printable_dossier(inspection_id):
 # ============================================================================
 
 @app.route("/api/declarations/<int:decl_id>/review", methods=["POST"])
+@app.route("/api/declarations/<decl_id>/review", methods=["POST"])
 @login_required
 @role_required(["Inspector", "Admin"])
 def review_declaration(decl_id):
@@ -589,6 +592,7 @@ def review_declaration(decl_id):
 
 
 @app.route("/api/declarations/<int:decl_id>/edit", methods=["POST"])
+@app.route("/api/declarations/<decl_id>/edit", methods=["POST"])
 @login_required
 @role_required(["Inspector", "Admin"])
 def edit_declaration(decl_id):
@@ -617,9 +621,15 @@ def edit_declaration(decl_id):
 
 
 @app.route("/api/declarations/confirm-all/<int:inspection_id>", methods=["POST"])
+@app.route("/api/declarations/confirm-all/<inspection_id>", methods=["POST"])
 @login_required
 @role_required(["Inspector", "Admin"])
 def confirm_all_declarations(inspection_id):
+    dossier = database.get_inspection_detail(inspection_id)
+    if not dossier:
+        return jsonify({"success": False, "error": "Dossier not found"}), 404
+    actual_id = dossier["inspection"]["id"]
+
     conn = database.get_db()
     try:
         cursor = conn.cursor()
@@ -629,13 +639,13 @@ def confirm_all_declarations(inspection_id):
             SET inspector_status = 'Confirmed', confirmed_value = COALESCE(suggested_value, extracted_value) 
             WHERE inspection_id = ? AND inspector_status = 'Unreviewed' AND extracted_value IS NOT NULL AND extracted_value != ''
             """,
-            (inspection_id,)
+            (actual_id,)
         )
         updated_count = cursor.rowcount
 
         cursor.execute(
             "INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address) VALUES (?, 'BULK_CONFIRM', 'Inspection', ?, ?, ?)",
-            (session["user"]["id"], inspection_id, f"Officer {session['user']['name']} bulk confirmed {updated_count} declarations.", request.remote_addr)
+            (session["user"]["id"], actual_id, f"Officer {session['user']['name']} bulk confirmed {updated_count} declarations.", request.remote_addr)
         )
 
         conn.commit()
@@ -646,12 +656,15 @@ def confirm_all_declarations(inspection_id):
 
 
 @app.route("/api/inspection/<int:inspection_id>/evaluate", methods=["POST"])
+@app.route("/api/inspection/<inspection_id>/evaluate", methods=["POST"])
 @login_required
 @role_required(["Inspector", "Admin"])
 def reevaluate_inspection_compliance(inspection_id):
     dossier = database.get_inspection_detail(inspection_id)
     if not dossier:
         return jsonify({"success": False, "error": "Dossier not found"}), 404
+
+    actual_id = dossier["inspection"]["id"]
 
     # Build declarations map from verified database state
     decls_map = {}
@@ -671,7 +684,7 @@ def reevaluate_inspection_compliance(inspection_id):
     try:
         cursor = conn.cursor()
         # Delete old findings
-        cursor.execute("DELETE FROM compliance_findings WHERE inspection_id = ?", (inspection_id,))
+        cursor.execute("DELETE FROM compliance_findings WHERE inspection_id = ?", (actual_id,))
 
         # Insert new findings
         for f in eval_result["findings"]:
@@ -683,7 +696,7 @@ def reevaluate_inspection_compliance(inspection_id):
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    inspection_id, rule_id, f["declaration_field"], f["status"],
+                    actual_id, rule_id, f["declaration_field"], f["status"],
                     f["observed_value"], f["expected_value"], f["finding_note"], f["severity"]
                 )
             )
@@ -691,7 +704,7 @@ def reevaluate_inspection_compliance(inspection_id):
         # Update inspection overall status
         cursor.execute(
             "UPDATE inspections SET compliance_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-            (eval_result["overall_status"], inspection_id)
+            (eval_result["overall_status"], actual_id)
         )
 
         # Update report status
@@ -700,13 +713,13 @@ def reevaluate_inspection_compliance(inspection_id):
             (
                 eval_result["overall_status"],
                 f"Statutory compliance evaluation updated by Officer {session['user']['name']}. Determination: {eval_result['overall_status']}.",
-                inspection_id
+                actual_id
             )
         )
 
         cursor.execute(
             "INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address) VALUES (?, 'REEVALUATE_RULES', 'Inspection', ?, ?, ?)",
-            (session["user"]["id"], inspection_id, f"Officer re-evaluated statutory rules. New status: {eval_result['overall_status']}.", request.remote_addr)
+            (session["user"]["id"], actual_id, f"Officer re-evaluated statutory rules. New status: {eval_result['overall_status']}.", request.remote_addr)
         )
 
         conn.commit()
@@ -715,9 +728,10 @@ def reevaluate_inspection_compliance(inspection_id):
 
     # Update compact session snapshot
     try:
-        updated_dossier = database.get_inspection_detail(inspection_id)
+        updated_dossier = database.get_inspection_detail(actual_id)
         if updated_dossier:
             compact_snap = database.make_compact_dossier_snapshot(updated_dossier)
+            session[f"dossier_{actual_id}"] = compact_snap
             session[f"dossier_{inspection_id}"] = compact_snap
             session["active_dossier"] = compact_snap
     except Exception as e:
@@ -733,9 +747,15 @@ def reevaluate_inspection_compliance(inspection_id):
 
 
 @app.route("/api/inspection/<int:inspection_id>/finalize", methods=["POST"])
+@app.route("/api/inspection/<inspection_id>/finalize", methods=["POST"])
 @login_required
 @role_required(["Inspector", "Admin"])
 def finalize_inspection(inspection_id):
+    dossier = database.get_inspection_detail(inspection_id)
+    if not dossier:
+        return jsonify({"success": False, "error": "Dossier not found"}), 404
+    actual_id = dossier["inspection"]["id"]
+
     data = request.get_json() or {}
     notes = data.get("notes", "").strip()
 
@@ -744,12 +764,12 @@ def finalize_inspection(inspection_id):
         cursor = conn.cursor()
         cursor.execute(
             "UPDATE inspections SET status = 'Completed', overall_notes = COALESCE(?, overall_notes), updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-            (notes if notes else None, inspection_id)
+            (notes if notes else None, actual_id)
         )
 
         cursor.execute(
             "INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address) VALUES (?, 'FINALIZE_DOSSIER', 'Inspection', ?, ?, ?)",
-            (session["user"]["id"], inspection_id, f"Officer {session['user']['name']} finalized & signed off on dossier.", request.remote_addr)
+            (session["user"]["id"], actual_id, f"Officer {session['user']['name']} finalized & signed off on dossier.", request.remote_addr)
         )
 
         conn.commit()
@@ -966,6 +986,7 @@ def check_ecommerce_listing():
 # ============================================================================
 
 @app.route("/inspection/<int:inspection_id>/notice")
+@app.route("/inspection/<inspection_id>/notice")
 @login_required
 @role_required(["Inspector", "Admin"])
 def draft_notice_view(inspection_id):
@@ -992,9 +1013,15 @@ def draft_notice_view(inspection_id):
 # ============================================================================
 
 @app.route("/api/inspection/<int:inspection_id>/report/edit", methods=["POST"])
+@app.route("/api/inspection/<inspection_id>/report/edit", methods=["POST"])
 @login_required
 @role_required(["Inspector", "Admin"])
 def edit_inspection_report(inspection_id):
+    dossier = database.get_inspection_detail(inspection_id)
+    if not dossier:
+        return jsonify({"success": False, "error": "Inspection not found"}), 404
+    actual_id = dossier["inspection"]["id"]
+
     if request.is_json:
         data = request.get_json() or {}
     else:
@@ -1019,7 +1046,7 @@ def edit_inspection_report(inspection_id):
     }
 
     res = database.save_report_revision(
-        inspection_id,
+        actual_id,
         updated_fields,
         edit_reason,
         session["user"]["id"],
@@ -1029,12 +1056,13 @@ def edit_inspection_report(inspection_id):
 
     if not request.is_json:
         flash(res["message"], "success")
-        return redirect(url_for("inspection_detail", inspection_id=inspection_id, step=4))
+        return redirect(url_for("inspection_detail", inspection_id=actual_id, step=4))
 
     return jsonify(res)
 
 
 @app.route("/api/inspection/<int:inspection_id>/report/revisions")
+@app.route("/api/inspection/<inspection_id>/report/revisions")
 @login_required
 def get_report_revisions_api(inspection_id):
     dossier = database.get_inspection_detail(inspection_id)
@@ -1051,16 +1079,23 @@ def get_report_revisions_api(inspection_id):
 
 
 @app.route("/inspection/<int:inspection_id>/notice/save", methods=["POST"])
+@app.route("/inspection/<inspection_id>/notice/save", methods=["POST"])
 @login_required
 @role_required(["Inspector", "Admin"])
 def save_draft_notice(inspection_id):
+    dossier = database.get_inspection_detail(inspection_id)
+    if not dossier:
+        flash("Inspection not found.", "error")
+        return redirect(url_for("inspections_list"))
+    actual_id = dossier["inspection"]["id"]
+
     notice_ref = request.form.get("notice_ref_no", "").strip()
     issued_to = request.form.get("issued_to", "").strip()
     draft_text = request.form.get("draft_text", "").strip()
     edit_reason = request.form.get("edit_reason", "Statutory notice draft updated by officer.").strip()
 
     if not notice_ref:
-        notice_ref = f"LM/ENF/{datetime.now().strftime('%Y')}/INSP-{inspection_id}-{int(time.time()) % 10000}"
+        notice_ref = f"LM/ENF/{datetime.now().strftime('%Y')}/INSP-{actual_id}-{int(time.time()) % 10000}"
 
     conn = database.get_db()
     try:
@@ -1072,19 +1107,19 @@ def save_draft_notice(inspection_id):
         if not existing:
             existing = cursor.execute(
                 "SELECT id, notice_ref_no FROM notices WHERE inspection_id = ?",
-                (inspection_id,)
+                (actual_id,)
             ).fetchone()
 
         if existing:
             # Notice exists -> Create revision
             conn.close()
             res = database.save_notice_revision(
-                existing["id"], inspection_id, notice_ref, issued_to, draft_text,
+                existing["id"], actual_id, notice_ref, issued_to, draft_text,
                 edit_reason, session["user"]["id"], session["user"]["role"], request.remote_addr
             )
             v_no = res.get("version_no", 2)
             flash(f"Revised Draft Notice {notice_ref} (Version {v_no}) saved to inspection dossier.", "success")
-            return redirect(url_for("inspection_detail", inspection_id=inspection_id, step=4))
+            return redirect(url_for("inspection_detail", inspection_id=actual_id, step=4))
         else:
             clash = cursor.execute("SELECT id FROM notices WHERE notice_ref_no = ?", (notice_ref,)).fetchone()
             if clash:
@@ -1095,9 +1130,9 @@ def save_draft_notice(inspection_id):
                 INSERT INTO notices (inspection_id, notice_ref_no, issued_to, violation_summary, legal_provisions, draft_text, officer_id, version_no, is_revised)
                 VALUES (?, ?, ?, 'Mandatory packaging declaration violations observed under Rule 6 of PCR 2011', 'Section 18 read with Section 36 & 49, LM Act 2009', ?, ?, 1, 0)
                 """,
-                (inspection_id, notice_ref, issued_to, draft_text, session["user"]["id"])
+                (actual_id, notice_ref, issued_to, draft_text, session["user"]["id"])
             )
-            database.add_audit_log(session["user"]["id"], "CREATE_DRAFT_NOTICE", "Notice", inspection_id, f"Officer created original draft notice {notice_ref} (Version 1)", request.remote_addr, conn=conn)
+            database.add_audit_log(session["user"]["id"], "CREATE_DRAFT_NOTICE", "Notice", actual_id, f"Officer created original draft notice {notice_ref} (Version 1)", request.remote_addr, conn=conn)
             conn.commit()
     finally:
         try:
@@ -1106,10 +1141,11 @@ def save_draft_notice(inspection_id):
             pass
 
     flash(f"Draft Legal Notice {notice_ref} (Version 1) saved to inspection dossier.", "success")
-    return redirect(url_for("inspection_detail", inspection_id=inspection_id, step=4))
+    return redirect(url_for("inspection_detail", inspection_id=actual_id, step=4))
 
 
 @app.route("/notice/<int:notice_id>/print")
+@app.route("/notice/<notice_id>/print")
 @login_required
 def print_notice(notice_id):
     notice = database.get_notice_detail(notice_id)
@@ -1120,6 +1156,7 @@ def print_notice(notice_id):
 
 
 @app.route("/inspection/<int:inspection_id>/compounding")
+@app.route("/inspection/<inspection_id>/compounding")
 @login_required
 @role_required(["Inspector", "Admin"])
 def compounding_view(inspection_id):
@@ -1135,9 +1172,16 @@ def compounding_view(inspection_id):
 
 
 @app.route("/inspection/<int:inspection_id>/compounding/submit", methods=["POST"])
+@app.route("/inspection/<inspection_id>/compounding/submit", methods=["POST"])
 @login_required
 @role_required(["Inspector", "Admin"])
 def submit_compounding_order(inspection_id):
+    dossier = database.get_inspection_detail(inspection_id)
+    if not dossier:
+        flash("Dossier not found.", "error")
+        return redirect(url_for("inspections_list"))
+    actual_id = dossier["inspection"]["id"]
+
     proposed_fee = float(request.form.get("proposed_fee", 25000.0))
     offense_section = request.form.get("offense_section", "Section 48 read with Section 36(1)")
     audit_note = request.form.get("audit_note", "")
@@ -1146,28 +1190,31 @@ def submit_compounding_order(inspection_id):
     conn = database.get_db()
     try:
         cursor = conn.cursor()
-        existing = cursor.execute("SELECT id FROM compounding_records WHERE inspection_id = ?", (inspection_id,)).fetchone()
+        existing = cursor.execute("SELECT id FROM compounding_records WHERE inspection_id = ?", (actual_id,)).fetchone()
         if existing:
             conn.close()
             res = database.save_compounding_revision(
-                existing["id"], inspection_id, proposed_fee, offense_section, audit_note,
+                existing["id"], actual_id, proposed_fee, offense_section, audit_note,
                 edit_reason, session["user"]["id"], session["user"]["role"], request.remote_addr
             )
             v_no = res.get("version_no", 2)
             flash(f"Revised Compounding Settlement Proposal (Version {v_no}) saved to dossier.", "success")
-            return redirect(url_for("inspection_detail", inspection_id=inspection_id, step=4))
+            return redirect(url_for("inspection_detail", inspection_id=actual_id, step=4))
         else:
             cursor.execute(
                 """
                 INSERT INTO compounding_records (inspection_id, offense_section, proposed_fee, calculated_amount, status, approved_by, audit_note, version_no, is_revised)
                 VALUES (?, ?, ?, ?, 'Proposed', ?, ?, 1, 0)
                 """,
-                (inspection_id, offense_section, proposed_fee, proposed_fee, session["user"]["id"], audit_note)
+                (actual_id, offense_section, proposed_fee, proposed_fee, session["user"]["id"], audit_note)
             )
-            database.add_audit_log(session["user"]["id"], "PROPOSE_COMPOUNDING", "Compounding", inspection_id, f"Proposed composition sum of ₹{proposed_fee:,.2f} (Version 1)", request.remote_addr, conn=conn)
+            database.add_audit_log(session["user"]["id"], "PROPOSE_COMPOUNDING", "Compounding", actual_id, f"Proposed composition sum of ₹{proposed_fee:,.2f} (Version 1)", request.remote_addr, conn=conn)
             conn.commit()
     finally:
         try:
+            conn.close()
+        except Exception:
+            pass
             conn.close()
         except Exception:
             pass
