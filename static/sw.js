@@ -4,9 +4,13 @@
  * Made by Team Avyukt
  */
 
-const CACHE_NAME = "esavadh-v1";
+const CACHE_NAME = "esavadh-v2";
 const ASSETS_TO_CACHE = [
   "/",
+  "/login",
+  "/dashboard",
+  "/inspection/new",
+  "/inspections",
   "/static/css/style.css",
   "/static/css/mobile.css",
   "/static/js/main.js",

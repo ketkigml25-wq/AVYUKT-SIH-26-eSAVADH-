@@ -193,7 +193,7 @@
 <script>
 let cameraActive = false;
 
-function validateInspectionForm() {
+function validateInspectionForm(e) {
     const fileInput = document.getElementById("package_image");
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
         if (window.showToast) {
@@ -206,19 +206,97 @@ function validateInspectionForm() {
             dropZone.style.border = "2px dashed var(--color-red)";
             dropZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+        if (e) e.preventDefault();
+        return false;
+    }
+
+    // Check if offline
+    const isOffline = !navigator.onLine || (window.offlineSync && !window.offlineSync.isOnline);
+    if (isOffline) {
+        if (e) e.preventDefault();
+        handleOfflineFormSubmit();
         return false;
     }
     
     const submitBtn = document.getElementById("submit-btn");
     if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = "&#9203; Processing Real Image with Native Windows OCR...";
+        submitBtn.innerHTML = "&#9203; Processing Real Image with Cloud OCR & Rule Engine...";
     }
     return true;
 }
 
+async function handleOfflineFormSubmit() {
+    const submitBtn = document.getElementById("submit-btn");
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = "&#9203; Saving Locally (Offline Mode)...";
+    }
+
+    const previewImg = document.getElementById("preview-image");
+    const fileInput = document.getElementById("package_image");
+    let imageBase64 = previewImg ? previewImg.src : "";
+    let fileName = fileInput && fileInput.files[0] ? fileInput.files[0].name : "offline_capture.jpg";
+
+    if (!imageBase64 || !imageBase64.startsWith("data:")) {
+        if (fileInput && fileInput.files[0]) {
+            imageBase64 = await new Promise((res) => {
+                const reader = new FileReader();
+                reader.onload = (ev) => res(ev.target.result);
+                reader.readAsDataURL(fileInput.files[0]);
+            });
+        }
+    }
+
+    const payload = {
+        ref_no: document.querySelector('input[name="ref_no"]')?.value || `INSP-OFFLINE-${Date.now()}`,
+        location: document.getElementById("location")?.value || "Field Market Surveillance Node",
+        product_name: document.getElementById("product_name")?.value || "Packaged Commodity",
+        category: document.getElementById("category")?.value || "Beverages / Food",
+        mfg_date: document.getElementById("mfg_date")?.value || "05/2024",
+        view_side: document.getElementById("selected-side-input")?.value || "Front",
+        image_base64: imageBase64,
+        image_filename: fileName
+    };
+
+    if (window.offlineSync) {
+        const sync_id = await window.offlineSync.enqueueInspection(payload);
+        
+        // Show Offline Confirmation Card
+        const formContainer = document.getElementById("inspection-form");
+        if (formContainer) {
+            formContainer.innerHTML = `
+                <div style="background: #FFFFFF; border: 2px solid var(--color-brass); padding: 2rem; text-align: center; margin: 1rem 0;">
+                    <div style="font-size: 3rem; margin-bottom: 0.75rem;">&#128245;</div>
+                    <h3 style="font-family: var(--font-serif); color: var(--color-plum); font-size: 1.3rem; margin-bottom: 0.5rem;">
+                        Inspection Saved to Offline Queue (No Internet)
+                    </h3>
+                    <p style="color: var(--color-charcoal); font-size: 0.95rem; max-width: 600px; margin: 0 auto 1.5rem auto; line-height: 1.6;">
+                        Your inspection photo and details for <strong>${payload.product_name}</strong> (Ref: <code>${payload.ref_no}</code>) have been securely saved to this device's local database.
+                    </p>
+                    <div style="background: var(--color-cerulean-light); border: 1px solid var(--color-cerulean); padding: 0.75rem 1rem; max-width: 500px; margin: 0 auto 1.5rem auto; font-size: 0.85rem; text-align: left;">
+                        <strong>&#9889; Automatic Background Sync Enabled:</strong> As soon as internet connectivity returns, the inspection will automatically upload and process without any manual intervention.
+                    </div>
+                    <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+                        <a href="/inspection/new" class="btn btn-primary">
+                            &#10010; Record Another Offline Inspection
+                        </a>
+                        <a href="/dashboard" class="btn btn-outline">
+                            Return to Dashboard
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (window.showToast) {
+            window.showToast(`Saved to offline queue (${sync_id}). Will auto-sync on reconnect.`, "success");
+        }
+    }
+}
+
 // Attach onsubmit
-document.getElementById("inspection-form").onsubmit = validateInspectionForm;
+document.getElementById("inspection-form").addEventListener("submit", validateInspectionForm);
 
 function handleFileSelected(input) {
     if (input.files && input.files[0]) {

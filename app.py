@@ -9,6 +9,7 @@ Modular Flask architecture designed for straightforward future migration to Fast
 import os
 import time
 import json
+import base64
 import sqlite3
 from datetime import datetime
 from functools import wraps
@@ -927,40 +928,155 @@ def sync_offline_inspections():
 
         for item in items:
             sync_id = item.get("sync_id")
+            if not sync_id:
+                continue
+
             data = item.get("data", {})
 
-            # Prevent duplicates
+            # 1. Idempotency duplicate check
             existing = cursor.execute("SELECT id FROM inspections WHERE sync_id = ?", (sync_id,)).fetchone()
             if existing:
+                processed_count += 1
                 continue
 
             ref_no = data.get("ref_no") or f"INSP-OFFLINE-{int(time.time() * 1000) % 100000:05d}"
             location = data.get("location", "Offline Field Node")
-            product_name = data.get("product_name", "Packaged Commodity")
+            user_product_name = data.get("product_name", "").strip()
             category = data.get("category", "Beverages / Food")
             mfg_date = data.get("mfg_date", "05/2024")
+            view_side = data.get("view_side", "Front")
+            img_b64 = data.get("image_base64", "")
+            img_filename = data.get("image_filename", "offline_image.jpg")
 
-            # Create product
+            image_rel_path = None
+            enhanced_rel_path = None
+            quality_score = 90
+            decls = {}
+            raw_ocr_text = ""
+
+            # 2. Decode and save image if present
+            if img_b64 and "base64," in img_b64:
+                try:
+                    header, encoded = img_b64.split("base64,", 1)
+                    img_bytes = base64.b64decode(encoded)
+                    safe_name = secure_filename(img_filename) or "capture.jpg"
+                    timestamped_name = f"offline_{int(time.time())}_{safe_name}"
+                    abs_orig_path = os.path.join(app.config["UPLOAD_FOLDER"], timestamped_name)
+                    with open(abs_orig_path, "wb") as img_file:
+                        img_file.write(img_bytes)
+                    image_rel_path = f"uploads/original/{timestamped_name}"
+
+                    # Enhance image & run OCR
+                    enhanced_rel_path, enh_summary, quality_score = enhance_evidence_image(abs_orig_path, timestamped_name)
+                    ocr_data = perform_ocr_extraction(abs_orig_path, side_hint=view_side)
+                    decls = ocr_data.get("declarations", {})
+                    raw_ocr_text = ocr_data.get("raw_text", "").strip()
+                except Exception as img_err:
+                    print(f"[eSavadh Sync] Error saving offline image: {img_err}")
+
+            # Determine commodity title
+            if user_product_name:
+                product_name = user_product_name
+            elif raw_ocr_text:
+                first_line = raw_ocr_text.split("\n")[0].strip()
+                product_name = first_line[:70] if len(first_line) > 3 else f"Commodity ({category})"
+            else:
+                product_name = f"Packaged Item ({category})"
+
+            # Evaluate compliance
+            compliance_res = evaluate_product_compliance(decls, mfg_date_str=mfg_date, category=category)
+
+            # 3. Insert Product
             cursor.execute(
-                "INSERT INTO products (name, category, mfg_date) VALUES (?, ?, ?)",
-                (product_name, category, mfg_date)
+                """
+                INSERT INTO products (name, category, mfg_date, country_of_origin, net_quantity, mrp)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    product_name, category, mfg_date,
+                    decls.get("country_of_origin", {}).get("extracted_value"),
+                    decls.get("net_quantity", {}).get("extracted_value"),
+                    decls.get("mrp", {}).get("extracted_value")
+                )
             )
             product_id = cursor.lastrowid
 
-            # Create inspection
+            # 4. Insert Inspection with sync_id
             cursor.execute(
                 """
                 INSERT INTO inspections (ref_no, product_id, inspector_id, location, compliance_status, source, overall_notes, sync_id)
-                VALUES (?, ?, 2, ?, 'Needs Review', 'field', 'Created in offline field mode and synchronized upon network restoration.', ?)
+                VALUES (?, ?, 2, ?, ?, 'field', 'Created in offline field mode and synchronized upon network restoration.', ?)
                 """,
-                (ref_no, product_id, location, sync_id)
+                (ref_no, product_id, location, compliance_res["overall_status"], sync_id)
             )
             inspection_id = cursor.lastrowid
 
-            # Add audit log
+            # 5. Insert Image Record if image exists
+            if image_rel_path:
+                cursor.execute(
+                    """
+                    INSERT INTO inspection_images (inspection_id, view_side, original_image_path, enhanced_image_path, quality_score, is_enhanced)
+                    VALUES (?, ?, ?, ?, ?, 1)
+                    """,
+                    (inspection_id, view_side, image_rel_path, enhanced_rel_path, quality_score)
+                )
+                image_id = cursor.lastrowid
+
+                if raw_ocr_text:
+                    cursor.execute(
+                        """
+                        INSERT INTO ocr_results (inspection_id, image_id, raw_text, detected_languages, confidence_score)
+                        VALUES (?, ?, ?, 'English', 0.90)
+                        """,
+                        (inspection_id, image_id, raw_ocr_text)
+                    )
+
+            # 6. Insert Declarations
+            for field, d in decls.items():
+                cursor.execute(
+                    """
+                    INSERT INTO declarations (inspection_id, field_name, extracted_value, confidence, suggested_value, suggestion_reason, inspector_status, confirmed_value, source_view)
+                    VALUES (?, ?, ?, ?, ?, ?, 'Unreviewed', ?, ?)
+                    """,
+                    (
+                        inspection_id, field, d.get("extracted_value"), d.get("confidence", 0.85),
+                        d.get("suggested_value"), d.get("suggestion_reason"),
+                        d.get("suggested_value") or d.get("extracted_value"), f"{view_side} Panel"
+                    )
+                )
+
+            # 7. Insert Compliance Findings
+            for f in compliance_res["findings"]:
+                r = cursor.execute("SELECT id FROM rules WHERE rule_code = ?", (f["rule_code"],)).fetchone()
+                rule_id = r["id"] if r else None
+                cursor.execute(
+                    """
+                    INSERT INTO compliance_findings (inspection_id, rule_id, declaration_field, status, observed_value, expected_value, finding_note, severity)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        inspection_id, rule_id, f["declaration_field"], f["status"],
+                        f["observed_value"], f["expected_value"], f["finding_note"], f["severity"]
+                    )
+                )
+
+            # 8. Insert Report & Audit Log
+            cursor.execute(
+                """
+                INSERT INTO reports (inspection_id, report_number, title, summary, final_status, generated_by)
+                VALUES (?, ?, ?, ?, ?, 2)
+                """,
+                (
+                    inspection_id, f"RPT-OFFLINE-{inspection_id:04d}",
+                    f"Statutory Compliance Certificate - {product_name}",
+                    f"Offline field inspection dossier {ref_no} synchronized. Status: {compliance_res['overall_status']}.",
+                    compliance_res["overall_status"]
+                )
+            )
+
             cursor.execute(
                 "INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address) VALUES (2, 'OFFLINE_SYNC', 'Inspection', ?, ?, ?)",
-                (inspection_id, f"Synchronized offline dossier {ref_no} with sync_id: {sync_id}", request.remote_addr)
+                (inspection_id, f"Synchronized offline dossier {ref_no} (sync_id: {sync_id}). Status: {compliance_res['overall_status']}.", request.remote_addr)
             )
             processed_count += 1
 
