@@ -499,6 +499,16 @@ def create_inspection():
     finally:
         conn.close()
 
+    # Save dossier snapshot in session for cross-container serverless persistence
+    try:
+        dossier_snapshot = database.get_inspection_detail(inspection_id)
+        if dossier_snapshot:
+            session[f"dossier_{inspection_id}"] = dossier_snapshot
+            session["active_dossier"] = dossier_snapshot
+            session["active_inspection_id"] = inspection_id
+    except Exception as e:
+        print(f"[eSavadh Session] Snapshot notice: {e}")
+
     flash(f"Inspection dossier {ref_no} created successfully. Real OCR extracted {len([k for k,v in decls.items() if v['extracted_value']])} declaration(s).", "success")
     return redirect(url_for("inspection_detail", inspection_id=inspection_id))
 
@@ -701,6 +711,15 @@ def reevaluate_inspection_compliance(inspection_id):
         conn.commit()
     finally:
         conn.close()
+
+    # Update session snapshot
+    try:
+        updated_dossier = database.get_inspection_detail(inspection_id)
+        if updated_dossier:
+            session[f"dossier_{inspection_id}"] = updated_dossier
+            session["active_dossier"] = updated_dossier
+    except Exception as e:
+        print(f"[eSavadh Session] Snapshot update notice: {e}")
 
     return jsonify({
         "success": True,

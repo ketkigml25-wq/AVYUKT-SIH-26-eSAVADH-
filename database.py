@@ -415,6 +415,109 @@ def get_inspections(limit=50, role_filter=None, user_id=None, source_filter=None
         conn.close()
 
 
+def _restore_dossier_to_db(dossier, conn):
+    """Restores a session-cached dossier into the local database instance if missing."""
+    if not dossier or not isinstance(dossier, dict):
+        return
+    insp = dossier.get("inspection")
+    if not insp:
+        return
+    
+    cursor = conn.cursor()
+    actual_id = insp.get("id")
+    if not actual_id:
+        return
+    
+    # 1. Product
+    prod_id = insp.get("product_id") or actual_id
+    cursor.execute("""
+        INSERT OR REPLACE INTO products (id, name, category, brand, manufacturer, mfg_date, expiry_date, country_of_origin, net_quantity, mrp)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        prod_id,
+        insp.get("product_name", "Packaged Commodity"),
+        insp.get("product_category", "Beverages / Food"),
+        insp.get("product_brand"),
+        insp.get("product_manufacturer"),
+        insp.get("product_mfg_date", "05/2024"),
+        insp.get("product_expiry_date"),
+        insp.get("product_country_of_origin", "India"),
+        insp.get("net_quantity"),
+        insp.get("mrp")
+    ))
+    
+    # 2. Inspection
+    cursor.execute("""
+        INSERT OR REPLACE INTO inspections (id, ref_no, product_id, inspector_id, location, compliance_status, source, overall_notes, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))
+    """, (
+        actual_id,
+        insp.get("ref_no", f"INSP-2026-DEL-{actual_id:04d}"),
+        prod_id,
+        insp.get("inspector_id", 2),
+        insp.get("location", "Field Surveillance"),
+        insp.get("compliance_status", "Needs Review"),
+        insp.get("source", "field"),
+        insp.get("overall_notes", "Restored dossier snapshot"),
+        insp.get("created_at")
+    ))
+    
+    # 3. Declarations
+    for d in dossier.get("declarations", []):
+        cursor.execute("""
+            INSERT OR REPLACE INTO declarations (id, inspection_id, field_name, extracted_value, confidence, suggested_value, suggestion_reason, inspector_status, confirmed_value, source_view)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            d.get("id"),
+            actual_id,
+            d.get("field_name"),
+            d.get("extracted_value"),
+            d.get("confidence", 0.9),
+            d.get("suggested_value"),
+            d.get("suggestion_reason"),
+            d.get("inspector_status", "Unreviewed"),
+            d.get("confirmed_value"),
+            d.get("source_view", "Front")
+        ))
+        
+    # 4. Compliance Findings
+    for f in dossier.get("findings", []):
+        r_code = f.get("rule_code")
+        r_row = cursor.execute("SELECT id FROM rules WHERE rule_code = ?", (r_code,)).fetchone()
+        rule_id = r_row["id"] if r_row else f.get("rule_id")
+        cursor.execute("""
+            INSERT OR REPLACE INTO compliance_findings (id, inspection_id, rule_id, declaration_field, status, observed_value, expected_value, finding_note, severity)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            f.get("id"),
+            actual_id,
+            rule_id,
+            f.get("declaration_field"),
+            f.get("status", "Compliant"),
+            f.get("observed_value"),
+            f.get("expected_value"),
+            f.get("finding_note"),
+            f.get("severity", "LOW")
+        ))
+        
+    # 5. Inspection Images
+    for img in dossier.get("images", []):
+        cursor.execute("""
+            INSERT OR REPLACE INTO inspection_images (id, inspection_id, view_side, original_image_path, enhanced_image_path, quality_score, is_enhanced)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            img.get("id"),
+            actual_id,
+            img.get("view_side", "Front"),
+            img.get("original_image_path"),
+            img.get("enhanced_image_path"),
+            img.get("quality_score", 95),
+            img.get("is_enhanced", 1)
+        ))
+        
+    conn.commit()
+
+
 def get_inspection_detail(inspection_id_or_ref, version_override=None):
     """
     Fetches the complete inspection dossier with full revision history across reports,
@@ -435,6 +538,17 @@ def get_inspection_detail(inspection_id_or_ref, version_override=None):
         """
         insp = conn.execute(query, (inspection_id_or_ref, str(inspection_id_or_ref))).fetchone()
         
+        if not insp:
+            # Check Flask session fallback for serverless state restoration
+            try:
+                from flask import session
+                saved_dossier = session.get(f"dossier_{inspection_id_or_ref}") or session.get("active_dossier")
+                if saved_dossier and (str(saved_dossier.get("inspection", {}).get("id")) == str(inspection_id_or_ref) or str(saved_dossier.get("inspection", {}).get("ref_no")) == str(inspection_id_or_ref)):
+                    _restore_dossier_to_db(saved_dossier, conn)
+                    insp = conn.execute(query, (inspection_id_or_ref, str(inspection_id_or_ref))).fetchone()
+            except Exception as e:
+                print(f"[eSavadh DB] Notice restoring dossier from session: {e}")
+
         if not insp:
             return None
 
