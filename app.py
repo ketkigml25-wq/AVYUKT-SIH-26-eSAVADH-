@@ -1203,10 +1203,13 @@ def audit_integrity():
 
 @app.errorhandler(404)
 def page_not_found(e):
-    if "user" in session:
-        flash("The requested compliance resource was not found. Redirected to dashboard.", "info")
-        return redirect(url_for("dashboard_router"))
-    return render_template("landing.html"), 200
+    return jsonify({
+        "error": "404 Not Found",
+        "path": request.path,
+        "url": request.url,
+        "environ_PATH_INFO": request.environ.get("PATH_INFO"),
+        "environ_QUERY_STRING": request.environ.get("QUERY_STRING")
+    }), 404
 
 
 # ============================================================================
