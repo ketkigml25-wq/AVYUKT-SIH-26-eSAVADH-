@@ -63,6 +63,9 @@ class VercelPathFixMiddleware:
                 real_path = real_path[len(p):]
                 break
 
+        # Normalize leading slashes
+        while real_path.startswith("//"):
+            real_path = real_path[1:]
         if not real_path.startswith("/"):
             real_path = "/" + real_path
 
