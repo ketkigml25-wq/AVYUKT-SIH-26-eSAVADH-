@@ -106,13 +106,25 @@ def role_required(allowed_roles):
 # Core Navigation & Landing Routes
 # ============================================================================
 
-@app.route("/")
-@app.route("/landing")
-@app.route("/api")
-@app.route("/api/")
-@app.route("/api/index")
-@app.route("/api/index.py")
+@app.route("/", methods=["GET", "POST"])
+@app.route("/landing", methods=["GET", "POST"])
+@app.route("/api", methods=["GET", "POST"])
+@app.route("/api/", methods=["GET", "POST"])
+@app.route("/api/index", methods=["GET", "POST"])
+@app.route("/api/index.py", methods=["GET", "POST"])
 def index():
+    if request.method == "POST":
+        return jsonify({
+            "env_PATH_INFO": request.environ.get("PATH_INFO"),
+            "env_QUERY_STRING": request.environ.get("QUERY_STRING"),
+            "env_RAW_URI": request.environ.get("RAW_URI"),
+            "env_REQUEST_URI": request.environ.get("REQUEST_URI"),
+            "env_HTTP_X_FORWARDED_URI": request.environ.get("HTTP_X_FORWARDED_URI"),
+            "env_HTTP_X_MATCHED_PATH": request.environ.get("HTTP_X_MATCHED_PATH"),
+            "env_HTTP_X_VERCEL_PATH": request.environ.get("HTTP_X_VERCEL_PATH"),
+            "request_path": request.path,
+            "request_url": request.url
+        })
     if "user" in session:
         return redirect(url_for("dashboard_router"))
     return render_template("landing.html")
