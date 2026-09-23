@@ -23,6 +23,8 @@ from core.rule_engine import evaluate_product_compliance
 from core.legal_notices import generate_draft_notice, calculate_compounding_fee
 from core.ecommerce_engine import parse_ecommerce_listing_details, get_tier2_roadmap_spec
 
+import urllib.parse
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(
     __name__,
@@ -30,6 +32,67 @@ app = Flask(
     static_folder=os.path.join(BASE_DIR, "static")
 )
 app.secret_key = os.environ.get("SECRET_KEY", "esavadh-statutory-metrology-avyukt-2026")
+
+class VercelPathFixMiddleware:
+    """
+    Middleware ensuring that Vercel's serverless function path rewrites
+    (/api/index.py?__v_path=... -> actual route) correctly map to Flask's internal routing table,
+    preserving exact HTTP methods and query parameters.
+    """
+    def __init__(self, wsgi_app):
+        self.wsgi_app = wsgi_app
+
+    def __call__(self, environ, start_response):
+        query_string = environ.get("QUERY_STRING", "")
+        real_path = None
+
+        if "__v_path=" in query_string:
+            parsed_qs = urllib.parse.parse_qs(query_string)
+            if "__v_path" in parsed_qs:
+                real_path = parsed_qs["__v_path"][0]
+                new_qs_params = {k: v for k, v in parsed_qs.items() if k != "__v_path" and k != "path"}
+                environ["QUERY_STRING"] = urllib.parse.urlencode(new_qs_params, doseq=True)
+
+        if not real_path:
+            raw_path = (
+                environ.get("HTTP_X_ORIGINAL_URI") or
+                environ.get("HTTP_X_FORWARDED_URI") or
+                environ.get("RAW_URI") or
+                environ.get("REQUEST_URI") or
+                environ.get("PATH_INFO") or
+                "/"
+            )
+            if "?" in raw_path:
+                raw_path = raw_path.split("?", 1)[0]
+            real_path = raw_path
+
+        # Strip any serverless entrypoint prefixes
+        prefixes = [
+            "/api/index.py",
+            "/api/index",
+            "/api/app.py",
+            "/api/app"
+        ]
+
+        for p in prefixes:
+            if real_path == p:
+                real_path = "/"
+                break
+            elif real_path.startswith(p + "/"):
+                real_path = real_path[len(p):]
+                break
+
+        # Normalize leading slashes
+        while real_path.startswith("//"):
+            real_path = real_path[1:]
+        if not real_path.startswith("/"):
+            real_path = "/" + real_path
+
+        environ["PATH_INFO"] = real_path
+        environ["SCRIPT_NAME"] = ""
+        return self.wsgi_app(environ, start_response)
+
+app.wsgi_app = VercelPathFixMiddleware(app.wsgi_app)
 
 IS_SERVERLESS = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME") or not os.access(BASE_DIR, os.W_OK))
 
@@ -1203,13 +1266,10 @@ def audit_integrity():
 
 @app.errorhandler(404)
 def page_not_found(e):
-    return jsonify({
-        "error": "404 Not Found",
-        "path": request.path,
-        "url": request.url,
-        "environ_PATH_INFO": request.environ.get("PATH_INFO"),
-        "environ_QUERY_STRING": request.environ.get("QUERY_STRING")
-    }), 404
+    if "user" in session:
+        flash("The requested compliance resource was not found. Redirected to dashboard.", "info")
+        return redirect(url_for("dashboard_router"))
+    return render_template("landing.html"), 200
 
 
 # ============================================================================
